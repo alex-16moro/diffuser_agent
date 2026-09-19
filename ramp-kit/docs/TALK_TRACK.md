@@ -1,0 +1,149 @@
+# Talk track — 45-minute session + final-round stakeholder defense
+
+Two parts: (A) the screen session, (B) the final-round role-play. Both assume
+you run the artifact **live**.
+
+---
+
+## A. The 45-minute screen (timeboxed)
+
+### 0–5 min · Frame the problem (before touching code)
+- "The repository already holds a lot of engineering knowledge — but it's
+  *distributed* across the `.ai/` agent guidance, the docs, code patterns, tests,
+  and CI. A new engineer has to reassemble it, and learns each rule the slow way:
+  a red PR, a review round-trip."
+- "So I'm not criticizing the repo or writing conventions it lacks. My goal was to
+  turn those scattered signals into **one governed contribution workflow** that
+  makes the path from task to review-ready change explicit — and extends it to the
+  rest of the team, PM/QA/DevOps, which is the gap the customer named."
+- "One decision drives everything: **conventions are data, not prose** — and they
+  come from the repository, not model memory."
+
+### 5–8 min · The architecture in one breath
+- Show `conventions/rules.yaml`. "Humans edit only this. `make build` projects it
+  into the agent's rules, `AGENTS.md`, the PM's Definition of Done, the QA
+  checklist, and the CI gate. They can't drift, because they're one source
+  rendered five ways."
+
+### 8–20 min · Live demo (`make demo`) — the core
+Run it and narrate:
+1. **Catch the bad.** `examples/candidate_scheduler` — the from-memory first cut.
+   Gate returns 8 blocking + 2 warnings, each with a rule id and a fix hint.
+   Point at two *real* ones: `DEPR001` (import moved to `models.unets`) and
+   `SCHED003` (missing `@register_to_config` → can't round-trip from the Hub).
+   "A reviewer would have caught these on round three. The engineer got them in
+   two seconds, in-editor, via `.cursor/hooks.json`."
+2. **Pass the good.** `examples/scaffolded_scheduler` — 0 findings. "This is what
+   `/scaffold scheduler <Name>` emits. It gets the *contract* right and leaves the
+   *math* as a TODO — I'm not going to fake a numerical method."
+3. **Tests green.** `make test` — structural + signature contracts pass; the
+   behavioral contracts (config round-trip, timestep count, output type,
+   determinism) skip cleanly with no torch and run in CI. "Zero installs; the demo
+   can't die on a missing wheel."
+4. **Change a rule live (`make demo-maintain`).** Add a rule to `rules.yaml`,
+   rebuild, and show the agent rules + `AGENTS.md` + PM DoD + QA + CI all change
+   from one edit, then it restores itself. "This is the answer to 'what happens
+   when you're gone' — not a claim, a demo."
+
+### 20–30 min · Multi-audience + boundaries
+- Open `projections/pm/definition-of-done.md`, `qa/review-checklist.md`,
+  `devops/ci-gate.yml`. "Same rules. The PM's 'done' is the reviewer's checklist
+  is the CI gate. That's the one-solution-many-audiences ask, made literal. Note
+  the registry separates upstream conventions from our customer guardrails."
+- Open `.cursorignore`. "Requirement 3 — the agent's **context** boundary: Cursor
+  won't feed these paths to the agent, shrinking the blast radius of an over-eager
+  scaffold. I'm careful here: this is not the *security* boundary — production
+  adds filesystem, network, credential, and tool permissions. This just keeps the
+  agent's context clean."
+
+### 30–38 min · Judgment: the design that scales, and what I skipped
+- "It's five fixed primitives driven by data — registry, gate, scaffold, docs
+  MCP, projections. Adding a component (model, pipeline) is registry rows + a
+  template, not a new command. That's `make build` regenerating a
+  `10-<component>.mdc` from a tag — I can show that live in under a minute."
+- "The doc-search MCP is real and Cursor-connectable — I'll run the handshake.
+  What I skipped inside it is *embeddings*; it ranks by keyword over curated docs.
+  Debuggable baseline first, embeddings if recall proves weak."
+- "I went deep on schedulers, not shallow on all three components, because
+  schedulers have the crispest enforceable contract — the best proof."
+- "No auto-fix: on a numerical library, auto-fix is where you inject silent wrong
+  corrections. Report-and-block first; mechanical auto-fix later."
+
+### 38–45 min · Where it breaks (lead with this, don't hide it)
+- "It checks structure, not the correctness of the math — by design; that's the
+  reviewer's job and the QA checklist says so."
+- "`# Copied from` is a well-formedness check, not the full `fix-copies` graph."
+- "Deprecation coverage is only as fresh as the maps — import moves *block*
+  (deterministic), renamed kwargs only *warn*, because a substring isn't proof of
+  deprecation in a version. False positives destroy trust, so blocking rules need
+  stronger evidence than warnings."
+- "The MCP defaults to a bundled snapshot offline; point it at a real checkout for
+  current coverage. Every result states its provenance, so I never overclaim
+  'version-correct'."
+- Close: "If I don't know something — say, whether a convention still holds after
+  a refactor — the honest move is to make it a rule and let the gate tell us."
+
+### The grounding story (use it if the contract is questioned)
+If a reviewer says "current diffusers schedulers use `set_num_inference_steps`":
+> "That's what the *philosophy doc* says — I checked the *code*. `DDPMScheduler`
+> and `EulerDiscreteScheduler` on `main` both define `set_timesteps`; the doc is
+> stale. My rule cites those source files, not the doc. This is exactly why I
+> ground rules in the repository and validate — a doc-grounded or memory-grounded
+> system would have shipped the wrong contract."
+This turns the single biggest risk to the thesis into its strongest proof.
+
+---
+
+## B. Final round — align with ADM, defend to a skeptical stakeholder, tie to account value
+
+### The account-value one-liner (lead with it)
+> "This turns 'ramp' from a people-cost you pay per hire into a repo asset that
+> compounds. Every convention we encode is one the customer never re-teaches and
+> never re-reviews by hand again."
+
+### Aligning with the ADM (before the room)
+- Tie to a metric the ADM already reports: **time-to-first-merged-PR** and
+  **review round-trips per PR**. Both are directly attacked by the gate.
+- Position it as a **land-and-expand wedge**: schedulers today → models/pipelines
+  → the customer's *private* library (same registry, their rules). That's the
+  expansion path, and it needs no rebuild.
+- Name the champion: the platform team that owns ramp. This makes *them* look good
+  to *their* stakeholders — that's who renews.
+
+### Skeptical-stakeholder Q&A (rehearsed answers)
+
+**"We already have `.ai/` / a linter / CONTRIBUTING.md. Why this?"**
+> "Those serve the agent and the reviewer. Yours don't reach PM, QA, or DevOps,
+> and they can drift from CI. This makes one source drive all five and enforces
+> it identically in the editor and in CI. I built *on* your `.ai/` pattern, not
+> against it."
+
+**"Isn't this just a wrapper around a linter?"**
+> "The linter is one of five projections. The value is that the reviewer's
+> checklist, the PM's Definition of Done, and the CI gate are provably the same
+> rules — that's what removes review round-trips, which is the expensive step."
+
+**"Our engineers will hate another gate yelling at them."**
+> "Correct code passes with zero findings — I'll show you. Warnings never block.
+> Every finding ships a fix. And it fires in-editor, so it feels like help, not a
+> tribunal at PR time."
+
+**"Who maintains this when you're gone?"** (requirement 4 — the renewal question)
+> "The team edits one YAML file. Add a rule, `make build`, done. The build fails
+> if a rule isn't enforced, so it can't rot into documentation-only. There's no
+> me-shaped dependency."
+
+**"What's the ROI?"**
+> "Two levers: fewer review round-trips (senior time, the scarcest resource) and
+> faster time-to-first-merge (new-hire productivity). Both are things your ADM
+> already measures. We can baseline them in week one and re-measure in a month."
+
+**"Where does it fall down?"**
+> "It won't judge whether the math is right — that stays human. I'd rather be
+> honest about that boundary than sell you an oracle. 'I don't know, here's how
+> I'd find out' is the posture I want on your account too."
+
+### If asked to extend it live (they said you'll reuse this)
+- Add a rule to `rules.yaml` (e.g. a new deprecated import), `make build`,
+  `make check` — show the new rule enforced across every surface in under a
+  minute. That live edit *is* the maintainability proof.

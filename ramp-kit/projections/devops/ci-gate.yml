@@ -1,0 +1,29 @@
+# GENERATED from conventions/rules.yaml by tools/build_projections.py. DO NOT EDIT. Run `make build`.
+name: convention-gate
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  convention-gate:
+    runs-on: ubuntu-latest  # no GPU needed
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pyyaml
+      - name: Convention gate
+        run: python tools/convention_check.py --all
+      - name: MCP doc-server self-test
+        run: python tools/docs_mcp_server.py --selftest
+      - name: Contract tests
+        run: python -m unittest discover -s tests -t .
+      - name: Machine-readable report
+        if: always()
+        run: python tools/convention_check.py --all --json > convention-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: convention-report
+          path: convention-report.json
