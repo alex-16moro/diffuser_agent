@@ -1,0 +1,3 @@
+# The gate, projections, and demo need only this.
+# Behavioral scheduler tests additionally need torch + diffusers (optional).
+pyyaml>=6.0

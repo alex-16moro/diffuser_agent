@@ -1,0 +1,307 @@
+# =============================================================================
+# diffusers Ramp Kit — Convention Registry (SINGLE SOURCE OF TRUTH)
+# =============================================================================
+# Every audience-facing artifact is PROJECTED from this file:
+#   - .cursor/rules/00-conventions.mdc  (agent, always-on: component=any rules)
+#   - .cursor/rules/10-<component>.mdc  (agent, auto-attached per component)
+#   - AGENTS.md                         (tool-agnostic: Codex, Claude Code, etc.)
+#   - tools/convention_check.py         (the runnable gate — CI + pre-PR + editor)
+#   - projections/pm|qa|devops/         (PM DoD, QA checklist, CI gate)
+#
+# TWO KINDS OF RULE (this is the enterprise distinction):
+#   source_type: upstream  -> "This is what diffusers itself requires." Verified
+#                             against actual repo source/docs; cited per rule.
+#   source_type: customer  -> "This is what OUR org additionally requires."
+#                             The customer's own guardrails, layered on top.
+#   Projections label the two separately so nobody confuses "the library needs
+#   this" with "our team decided this."
+#
+# SCALING MODEL: a small FIXED set of primitives driven by DATA. Cover a new
+# component (model, pipeline) or a new mistake by adding ROWS (+ a template),
+# never new commands/machinery. Each rule's `component:` tag routes it to the
+# right auto-attached .cursor/rules file. A rule's `check:` must be one of the
+# check types already implemented in convention_check.py.
+# =============================================================================
+
+meta:
+  library: huggingface/diffusers
+  registry_version: "0.6.0"
+  build_target: cursor
+  upstream_conventions:
+    - "docs: conceptual/contribution.md (# Copied from, tests, make style/quality)"
+    - "docs: conceptual/philosophy.md (single-file policy)"
+    - ".ai/AGENTS.md, .ai/review-rules.md, .ai/skills/{model-integration,self-review}"
+  # NOTE on grounding: the scheduler lifecycle contract below (set_timesteps/step)
+  # was verified on 2026-09-19 against ACTUAL current source on main —
+  # src/diffusers/schedulers/scheduling_ddpm.py and scheduling_euler_discrete.py —
+  # NOT the philosophy doc, which still references the older "set_num_inference_steps"
+  # naming. When source and prose disagree, source wins. This is the whole point
+  # of grounding from the repo + validating, rather than trusting docs or memory.
+  components:
+    scheduler:
+      label: "Scheduler"
+      path: "src/diffusers/schedulers/scheduling_*.py"
+      reference: "examples/scaffolded_scheduler/scheduling_ddpm_lite.py"
+      template: "templates/scheduler/scheduling_TEMPLATE.py"
+    # model:     <- extension point, see templates/README.md
+    # pipeline:  <- extension point
+
+# Severity drives behavior at each surface:
+#   block  -> convention_check exits nonzero; CI red; agent must not produce it
+#   warn   -> surfaced to reviewer/agent, does not fail the build
+#   info   -> guidance only
+rules:
+
+  - id: SCHED001
+    component: scheduler
+    source_type: upstream
+    title: "Schedulers inherit SchedulerMixin and ConfigMixin"
+    applies_to: ["src/diffusers/schedulers/scheduling_*.py", "examples/**/scheduling_*.py"]
+    severity: block
+    check: ast_class_bases
+    rationale: >
+      Schedulers are swappable via ConfigMixin.from_config and serializable via
+      SchedulerMixin. A scheduler that skips these can't be loaded, saved, or
+      swapped like every other scheduler — it breaks the pipeline contract.
+    source: "VERIFIED: scheduling_ddpm.py, scheduling_euler_discrete.py (class bases)"
+    agent_hint: "Declare `class XScheduler(SchedulerMixin, ConfigMixin):`."
+    review_prompt: "Does the scheduler inherit both SchedulerMixin and ConfigMixin?"
+    dod: "New scheduler is loadable via from_config and saveable via save_config."
+
+  - id: SCHED002
+    component: scheduler
+    source_type: upstream
+    title: "Schedulers implement the step() / set_timesteps() contract"
+    applies_to: ["src/diffusers/schedulers/scheduling_*.py", "examples/**/scheduling_*.py"]
+    severity: block
+    check: ast_required_methods
+    params:
+      required_methods: ["step", "set_timesteps"]
+    rationale: >
+      Every denoising loop calls set_timesteps(...) once, then step(...) each
+      iteration. VERIFIED against current source: DDPMScheduler and
+      EulerDiscreteScheduler both define `set_timesteps(self, num_inference_steps,
+      device=None, ...)` and `step(self, model_output, timestep, sample,
+      generator=None, return_dict=True)`. The philosophy doc's older
+      "set_num_inference_steps" name is stale; the code is canonical.
+    source: "VERIFIED: scheduling_ddpm.py + scheduling_euler_discrete.py (def set_timesteps / def step)"
+    agent_hint: "Implement `set_timesteps(self, num_inference_steps, device=None)` and `step(self, model_output, timestep, sample, generator=None, return_dict=True) -> SchedulerOutput`."
+    review_prompt: "Are step() and set_timesteps() both present and returning the Output dataclass?"
+    dod: "Scheduler runs inside a minimal DDPM-style loop without adapter code."
+
+  - id: SCHED003
+    component: scheduler
+    source_type: upstream
+    title: "Scheduler __init__ is decorated with @register_to_config"
+    applies_to: ["src/diffusers/schedulers/scheduling_*.py", "examples/**/scheduling_*.py"]
+    severity: block
+    check: ast_init_registered
+    rationale: >
+      @register_to_config captures constructor args into the config so
+      from_pretrained / save_pretrained round-trip correctly. Without it, config
+      is empty and the scheduler cannot be reconstructed from the Hub.
+    source: "VERIFIED: scheduling_ddpm.py, scheduling_euler_discrete.py (@register_to_config on __init__)"
+    agent_hint: "Add `@register_to_config` directly above `def __init__`."
+    review_prompt: "Is __init__ decorated with @register_to_config?"
+    dod: "save_config()/from_config() round-trips all constructor arguments."
+
+  - id: REPRO001
+    component: any
+    source_type: upstream
+    title: "Randomness threads through a generator, never global RNG"
+    applies_to: ["src/diffusers/**", "examples/**"]
+    severity: block
+    check: ast_generator_randomness
+    rationale: >
+      Reproducibility is a core diffusers guarantee. torch.randn(...) /
+      np.random without an explicit `generator=` makes outputs unseedable and
+      breaks deterministic tests and customer reproducibility.
+    source: "review-rules.md (reproducibility); randn_tensor utility"
+    agent_hint: "Use `randn_tensor(shape, generator=generator, device=..., dtype=...)` and thread `generator` through the call chain."
+    review_prompt: "Is every sampling call seeded via an explicit generator?"
+    dod: "Same seed -> identical output, verified by a determinism test."
+
+  - id: DEVICE001
+    component: any
+    source_type: upstream
+    title: "No hardcoded CUDA/device placement"
+    applies_to: ["src/diffusers/**", "examples/**"]
+    severity: block
+    check: regex
+    params:
+      pattern: "\\.(cuda)\\(\\)|\\.to\\(\\s*[\"']cuda"
+    rationale: >
+      Hardcoding .cuda()/.to("cuda") breaks CPU, MPS, and multi-GPU users and
+      fails CI runners without a GPU. Device must be caller-controlled.
+    source: "review-rules.md (device handling)"
+    agent_hint: "Respect the module's existing device: `.to(sample.device)` or accept a `device` argument."
+    review_prompt: "Any hardcoded cuda placement that ignores the caller's device?"
+    dod: "Example runs on CPU CI with no code change."
+
+  # DEPR001 is BLOCK: import-path moves are strong evidence — the old path fails
+  # at import, so a false positive is nearly impossible.
+  - id: DEPR001
+    component: any
+    source_type: upstream
+    title: "No deprecated/moved import paths"
+    applies_to: ["src/diffusers/**", "examples/**", "tests/**"]
+    severity: block
+    check: deprecation_map
+    params:
+      deprecated:
+        "diffusers.models.unet_2d": "diffusers.models.unets.unet_2d"
+        "diffusers.models.unet_2d_condition": "diffusers.models.unets.unet_2d_condition"
+        "from diffusers.models.cross_attention": "from diffusers.models.attention_processor"
+    rationale: >
+      New engineers copy old blog snippets that import moved modules. These pass
+      a naive eye but fail at import. Highest-frequency ramp mistake; safe to
+      block because the failure is deterministic.
+    source: "diffusers module reorganisation (models -> models.unets, attention_processor)"
+    agent_hint: "Use the current import path shown in the check output."
+    review_prompt: "Any deprecated/moved import path?"
+    dod: "No ImportError from moved modules."
+
+  # DEPR002 is WARN, not block: a bare substring like `torch_dtype=` can appear
+  # in legitimate contexts, and deprecation status varies by version. A blocking
+  # rule needs stronger evidence than a substring; false positives destroy trust.
+  # Verify against the target release before ever promoting these to `block`.
+  - id: DEPR002
+    component: any
+    source_type: upstream
+    title: "Avoid deprecated kwargs (verify per release)"
+    applies_to: ["src/diffusers/**", "examples/**"]
+    severity: warn
+    check: deprecation_map
+    params:
+      deprecated:
+        "predict_epsilon=": "prediction_type='epsilon'"
+        "torch_dtype=": "dtype= (newer API; confirm for your pinned version)"
+    rationale: >
+      These kwargs were renamed in recent releases, but a lexical match is not
+      proof of deprecation in a given version. Surface as advisory so the author
+      confirms rather than being falsely blocked.
+    source: "diffusers changelog (predict_epsilon->prediction_type; torch_dtype->dtype)"
+    agent_hint: "Prefer the newer kwarg, but confirm against your pinned diffusers version."
+    review_prompt: "Any renamed kwargs that should use the current name?"
+    dod: "No removed kwargs for the pinned version."
+
+  - id: IMPORT001
+    component: scheduler
+    source_type: upstream
+    title: "Schedulers stay self-contained (no heavy util imports)"
+    applies_to: ["src/diffusers/schedulers/scheduling_*.py", "examples/**/scheduling_*.py"]
+    severity: warn
+    check: regex
+    params:
+      pattern: "from\\s+\\.{2,}\\w+\\.\\w+\\.\\w+\\s+import|import\\s+diffusers\\.pipelines"
+    rationale: >
+      The single-file policy keeps schedulers readable and swappable. Pulling in
+      pipeline internals or deep util chains couples them to the rest of the
+      library and violates the philosophy reviewers enforce.
+    source: "conceptual/philosophy.md (schedulers self-contained)"
+    agent_hint: "Copy the small helper in-file with a `# Copied from` marker instead of importing deep internals."
+    review_prompt: "Does the scheduler stay self-contained per single-file policy?"
+    dod: "Scheduler imports only torch, config/scheduler mixins, and small utils."
+
+  - id: COPY001
+    component: any
+    source_type: upstream
+    title: "# Copied from markers are well-formed"
+    applies_to: ["src/diffusers/**"]
+    severity: warn
+    check: copied_from_wellformed
+    rationale: >
+      The `# Copied from` mechanism keeps duplicated blocks in lockstep via
+      `make fix-copies`. A malformed marker silently disables that sync, so a
+      later fix to the source won't propagate here.
+    source: "conceptual/contribution.md (# Copied from mechanism)"
+    agent_hint: "Format: `# Copied from diffusers.<module.path>.<Symbol> with A->B`."
+    review_prompt: "Do all # Copied from markers resolve to a real dotted path?"
+    dod: "`make fix-copies` produces no diff."
+
+  - id: MUT001
+    component: any
+    source_type: upstream
+    title: "No mutable default arguments"
+    applies_to: ["src/diffusers/**", "examples/**"]
+    severity: block
+    check: ast_mutable_defaults
+    rationale: >
+      Mutable defaults ([], {}) are shared across calls and cause state bleed —
+      a classic bug flagged repeatedly in scheduler reviews.
+    source: "review-rules.md (mutable defaults across schedulers)"
+    agent_hint: "Default to None and initialise inside the body."
+    review_prompt: "Any mutable default arguments?"
+    dod: "No shared-mutable-default warnings."
+
+  - id: LOG001
+    component: any
+    source_type: upstream
+    title: "Library code logs, it does not print()"
+    applies_to: ["src/diffusers/**", "examples/**/scheduling_*.py"]
+    severity: warn
+    check: regex
+    params:
+      pattern: '^\s*print\('
+    rationale: >
+      print() pollutes user stdout and can't be filtered by verbosity. Use the
+      library logger.
+    source: "conceptual/contribution.md (style); diffusers.utils.logging"
+    agent_hint: "Use `logger = logging.get_logger(__name__)` and `logger.info(...)`."
+    review_prompt: "Any stray print() in library code?"
+    dod: "No print() in src/."
+
+  - id: DOC001
+    component: any
+    source_type: upstream
+    title: "Public methods have docstrings"
+    applies_to: ["src/diffusers/**", "examples/**/scheduling_*.py"]
+    severity: warn
+    check: ast_public_docstrings
+    rationale: >
+      Public methods without docstrings ship undocumented API. diffusers PRs
+      require informative docstrings for all public methods.
+    source: "conceptual/contribution.md (PR rule 10: docstrings)"
+    agent_hint: "Add a Google-style docstring with Args/Returns."
+    review_prompt: "Do all public methods have docstrings?"
+    dod: "Public surface is documented."
+
+  - id: TEST001
+    component: scheduler
+    source_type: upstream
+    title: "New schedulers/models ship with a matching test file"
+    applies_to: ["src/diffusers/schedulers/scheduling_*.py", "examples/**/scheduling_*.py"]
+    severity: block
+    check: test_presence
+    params:
+      test_glob: "tests/schedulers/test_{stem}.py"
+      required_mentions: ["set_timesteps", "step"]
+    rationale: >
+      "No quality testing = no merge." A new scheduler with no test cannot move
+      toward deployment. Presence is not enough: the test must actually exercise
+      set_timesteps and step, otherwise a dummy file would satisfy the gate.
+    source: "conceptual/contribution.md (PR rule 9: high-coverage tests)"
+    agent_hint: "Generate a contract test from tests/_templates/scheduler_test.py that asserts set_timesteps and step."
+    review_prompt: "Is there a test file covering the new scheduler?"
+    dod: "Scheduler has a test that runs in CI (not @slow)."
+
+  # ---- Customer guardrails (source_type: customer) --------------------------
+  # These are NOT diffusers conventions — they are example org policies layered
+  # on top, to show the two-tier model. A customer edits/extends this section.
+  - id: CUST001
+    component: any
+    source_type: customer
+    title: "No debugging leftovers committed"
+    applies_to: ["src/diffusers/**", "examples/**"]
+    severity: warn
+    check: regex
+    params:
+      pattern: "breakpoint\\(\\)|pdb\\.set_trace|import\\s+pdb\\b"
+    rationale: >
+      Example CUSTOMER guardrail (not an upstream rule): our team blocks stray
+      debugger calls from reaching review. Demonstrates how org policy layers on
+      top of upstream conventions from the same registry.
+    source: "customer policy: ramp-kit team standards"
+    agent_hint: "Remove breakpoint()/pdb before committing."
+    review_prompt: "Any debugger leftovers (breakpoint/pdb)?"
+    dod: "No debugger calls in committed code."
