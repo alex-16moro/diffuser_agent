@@ -8,6 +8,13 @@ takes: plan → design → build → review → test → deploy.**
 Built for the Solutions Architect technical screen. Everything here runs; there
 are no screenshots standing in for working software.
 
+**Two repos (both yours):** this overlay (`diffuser_agent`) plus a fork of the
+library ([alex-16moro/diffusers](https://github.com/alex-16moro/diffusers)).
+The live Cloud Agent demo launches **on the fork**. Install clones this kit to
+`ramp-kit/` and the gate/scaffold write into the real
+`src/diffusers/schedulers/` tree. Docs search uses the fork's `docs/source/en`.
+Do not PR huggingface/diffusers. See `overlay/OVERLAY.md`.
+
 ---
 
 ## The problem I chose to solve (and why it's the right one)

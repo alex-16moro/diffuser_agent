@@ -3,7 +3,7 @@
 
 PYTHON ?= python3
 
-.PHONY: help doctor build check check-json test mcp demo demo-contribute demo-contribute-clean demo-maintain clean
+.PHONY: help doctor build check check-json test mcp demo demo-contribute demo-contribute-clean demo-maintain attach clean
 
 help:
 	@echo "diffusers Ramp Kit"
@@ -17,6 +17,7 @@ help:
 	@echo "  make demo-contribute  First-contribution journey (KEEP=1 leaves files)"
 	@echo "  make demo-contribute-clean  Remove the EulerLite contribution files"
 	@echo "  make demo-maintain  Prove req #4: add a rule, rebuild, watch it propagate"
+	@echo "  make attach     Copy overlay Cursor files into a diffusers checkout (TARGET=../diffusers)"
 	@echo "  make clean      Remove generated projections"
 
 doctor:
@@ -27,8 +28,13 @@ doctor:
 		&& test -f .cursor/commands/search-docs.md && test -f .cursor/skills/search-docs/SKILL.md \
 		|| (echo "Missing Cursor wiring (hooks, mcp launcher, scaffold, search-docs, .cursorignore)"; exit 1)
 	@! grep -q workspaceFolder .cursor/mcp.json || (echo "mcp.json must not use workspaceFolder vars (Cloud stdio does not expand them)"; exit 1)
+	@test -f tools/attach_library.py && test -f overlay/OVERLAY.md \
+		|| (echo "Missing overlay attach tooling"; exit 1)
 	@$(PYTHON) tools/docs_mcp_server.py --selftest >/dev/null
-	@echo "doctor OK: $(PYTHON) + PyYAML + Cursor files + MCP self-test"
+	@echo "doctor OK: $(PYTHON) + PyYAML + Cursor files + MCP self-test + overlay"
+
+attach:
+	$(PYTHON) tools/attach_library.py --target $(or $(TARGET),../diffusers)
 
 build:
 	$(PYTHON) tools/build_projections.py

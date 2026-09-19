@@ -14,6 +14,38 @@ sys.path.insert(0, str(ROOT / "tools"))
 from convention_check import check_file, load_rules  # noqa: E402
 
 
+class TestLibraryPaths(unittest.TestCase):
+    def test_kit_standin_is_library_root_without_docs_tree(self):
+        from library_paths import KIT_ROOT, resolve_docs_root, resolve_library_root
+
+        self.assertEqual(resolve_library_root(), KIT_ROOT)
+        docs, provenance = resolve_docs_root()
+        self.assertIn("bundled snapshot", provenance)
+        self.assertTrue(docs.exists())
+
+    def test_env_docs_root_wins(self):
+        from library_paths import resolve_docs_root
+
+        with tempfile.TemporaryDirectory() as td:
+            fake = Path(td) / "en"
+            fake.mkdir()
+            (fake / "x.md").write_text("# Hello\n")
+            proc = subprocess.run(
+                [sys.executable, "-c",
+                 "from library_paths import resolve_docs_root; p,s=resolve_docs_root(); print(p); print(s)"],
+                cwd=ROOT,
+                env={**dict(**{k: v for k, v in __import__("os").environ.items()}),
+                     "DIFFUSERS_DOCS_ROOT": str(fake),
+                     "PYTHONPATH": str(ROOT / "tools")},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn(str(fake), proc.stdout)
+        self.assertIn("configured checkout", proc.stdout)
+
+
 class TestMcpFraming(unittest.TestCase):
     def test_selftest_uses_content_length(self):
         proc = subprocess.run(

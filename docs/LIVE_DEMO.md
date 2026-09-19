@@ -1,14 +1,16 @@
 # Live contribution demo — run this in the 45-minute screen
 
 Goal: show **how a new engineer makes a first contribution**, not how to use
-Diffusers. Open **this repo root** as the Cursor workspace.
+Diffusers. **Primary workspace: the library fork**
+[`alex-16moro/diffusers`](https://github.com/alex-16moro/diffusers). This kit
+(`diffuser_agent`) is cloned beside it as `ramp-kit/`.
 
 Two ways to play the same journey:
 
 | Path | When |
 |------|------|
-| **A. Cursor agent** (`/scaffold scheduler EulerLite`) | Primary. This is the customer motion. |
-| **B. CLI twin** (`make demo-contribute KEEP=1`) | Rehearsal, or if slash-command / MCP stalls. Same files, same gate. |
+| **A. Cloud Agent on the fork** (`/scaffold scheduler EulerLite`) | Primary. Real `src/diffusers/schedulers/`, real `docs/source/en`. |
+| **B. CLI twin in this kit** (`make demo-contribute KEEP=1`) | Rehearsal if the fork VM is slow. Stand-in tree only. |
 
 Do **not** run Path B first if you want Path A to create the files live.
 
@@ -39,20 +41,14 @@ plan → ground → build → gate → test → review → CI clearance
 
 Pre-flight (before they sit):
 
-- Desktop: Settings → MCP → enable `diffusers-docs` (`.cursor/mcp.json`).
-- **Cloud Agent:** project `.cursor/mcp.json` is **not** loaded, and stdio
-  **cannot** use `cwd` or `${workspaceFolder}` (that is the connection
-  failure). Add a custom **stdio** MCP in the launch dropdown:
-
-  ```
-  name:    diffusers-docs
-  command: python3
-  args:    -u .cursor/mcp-diffusers-docs.py
-  ```
-
-  The launcher walks cwd / git root / `/workspace` to find the server. If
-  `search_docs` is still missing, `/search-docs` and the `search-docs` skill
-  are the same process via CLI.
+- Desktop: Settings → MCP → enable `diffusers-docs` and/or Hugging Face HTTP
+  (`https://huggingface.co/mcp`).
+- **Cloud Agent:** launch on **`alex-16moro/diffusers`**, branch `main` (not this
+  kit). Enable Hugging Face HTTP MCP if you want Hub search. Library docs stdio
+  is `python3 -u /workspace/.cursor/mcp-diffusers-docs.py` (no `cwd`, no
+  `${workspaceFolder}`, no OAuth). Catch-early fixture:
+  `ramp-kit/examples/candidate_scheduler`.
+- Paste **Prompt A (fork)** from `docs/CURSOR_PROMPTS.md`.
 
 Paste **Prompt A** from `docs/CURSOR_PROMPTS.md`, or type:
 
