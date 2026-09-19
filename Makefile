@@ -23,8 +23,10 @@ doctor:
 	@command -v $(PYTHON) >/dev/null || (echo "Need python3 on PATH"; exit 1)
 	@$(PYTHON) -c "import yaml" 2>/dev/null || (echo "Need PyYAML: pip install -r requirements.txt"; exit 1)
 	@test -f .cursor/hooks.json && test -f .cursor/mcp.json && test -f .cursor/commands/scaffold.md && test -f .cursorignore \
-		|| (echo "Missing Cursor wiring (.cursor/hooks.json, mcp.json, commands/scaffold.md, .cursorignore)"; exit 1)
-	@echo "doctor OK: $(PYTHON) + PyYAML + Cursor files"
+		&& test -f .cursor/mcp-diffusers-docs.sh && test -f .cursor/commands/search-docs.md \
+		|| (echo "Missing Cursor wiring (hooks, mcp launcher, scaffold, search-docs, .cursorignore)"; exit 1)
+	@$(PYTHON) tools/docs_mcp_server.py --selftest >/dev/null
+	@echo "doctor OK: $(PYTHON) + PyYAML + Cursor files + MCP self-test"
 
 build:
 	$(PYTHON) tools/build_projections.py

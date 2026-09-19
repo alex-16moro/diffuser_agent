@@ -37,7 +37,13 @@ plan → ground → build → gate → test → review → CI clearance
 
 ## Path A — Cursor (primary, ~10–12 min)
 
-Pre-flight (before they sit): MCP `diffusers-docs` enabled, rules visible.
+Pre-flight (before they sit):
+
+- Desktop: Settings → MCP → enable `diffusers-docs` (`.cursor/mcp.json`).
+- **Cloud Agent:** project `.cursor/mcp.json` is **not** loaded. Either enable
+  `diffusers-docs` in the MCP dropdown (Dashboard → Integrations, stdio:
+  `bash .cursor/mcp-diffusers-docs.sh`), or tell the agent to `/search-docs`
+  — that command always exists in the repo and runs the same server via CLI.
 
 Paste **Prompt A** from `docs/CURSOR_PROMPTS.md`, or type:
 

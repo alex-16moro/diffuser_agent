@@ -27,6 +27,17 @@ class TestMcpFraming(unittest.TestCase):
         self.assertIn("Content-Length", proc.stdout)
 
 
+class TestMcpLauncher(unittest.TestCase):
+    def test_project_mcp_json_uses_repo_root_wrapper(self):
+        cfg = json.loads((ROOT / ".cursor" / "mcp.json").read_text())
+        server = cfg["mcpServers"]["diffusers-docs"]
+        self.assertEqual(server.get("type"), "stdio")
+        self.assertEqual(server["command"], "bash")
+        self.assertEqual(server["args"], [".cursor/mcp-diffusers-docs.sh"])
+        self.assertTrue((ROOT / ".cursor" / "mcp-diffusers-docs.sh").is_file())
+        self.assertTrue((ROOT / ".cursor" / "commands" / "search-docs.md").is_file())
+
+
 class TestAfterFileEditHook(unittest.TestCase):
     def test_hook_reports_findings_on_candidate(self):
         payload = json.dumps({

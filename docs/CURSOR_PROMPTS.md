@@ -9,9 +9,10 @@ primary, `make demo-contribute KEEP=1` as fallback).
 
 ## Pre-flight (20 seconds, so nothing stalls live)
 
-- **Doctor:** `make doctor` — python3, PyYAML, and Cursor files present.
-- **Enable the MCP:** Cursor → Settings → **MCP** → enable `diffusers-docs`
-  (wired in `.cursor/mcp.json`) and allow its tool calls.
+- **Doctor:** `make doctor` — python3, PyYAML, Cursor files, MCP self-test.
+- **Enable the MCP (Desktop):** Cursor → Settings → **MCP** → enable `diffusers-docs`.
+- **Cloud Agents:** project MCP is not auto-loaded. Use `/search-docs` or enable
+  the server in the launch MCP dropdown (`bash .cursor/mcp-diffusers-docs.sh`).
 - **Confirm rules loaded:** the Agent sidebar should show `00-conventions`
   active; `10-scheduler` auto-attaches once a scheduler file is open.
 - **Optional, for green behavioral tests:** `pip install torch diffusers`. Without
@@ -32,7 +33,8 @@ Context you must use (they're already in the repo):
 - The always-on rules in .cursor/rules/ and the auto-attached 10-scheduler rules
   are generated from it.
 - The `diffusers-docs` MCP tool (search_docs) is your grounding source — use it
-  before writing code.
+  before writing code. If it is not in your tool list, run `/search-docs` or
+  `python3 tools/docs_mcp_server.py --query "scheduler set_timesteps step"`.
 - .cursorignore defines your approved context boundary — do not read or copy from
   outside it.
 
