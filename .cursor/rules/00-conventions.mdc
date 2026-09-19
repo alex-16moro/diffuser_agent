@@ -12,8 +12,11 @@ They mirror the project's own `.ai/` rules and are enforced by
 code that violates a **block** rule will fail the build.
 
 Use the `diffusers-docs` MCP tool (`search_docs`) to ground answers in the
-library's current docs before scaffolding. Do not pull in code or context
-from outside this repo's approved boundaries (see `.cursorignore`).
+library's current docs before scaffolding. If that tool is **not** in your
+tool list (Cloud Agents often skip project `.cursor/mcp.json`), run
+`/search-docs <query>` or `python3 tools/docs_mcp_server.py --query "..."`
+— same server, CLI transport. Do not pull in code or context from outside
+this repo's approved boundaries (see `.cursorignore`).
 
 ## Blocking conventions (must satisfy)
 - **REPRO001 — Randomness threads through a generator, never global RNG.** Use `randn_tensor(shape, generator=generator, device=..., dtype=...)` and thread `generator` through the call chain.

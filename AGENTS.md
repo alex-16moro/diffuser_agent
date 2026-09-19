@@ -6,7 +6,10 @@
 This repo uses convention-as-code. The authoritative rules live in
 `conventions/rules.yaml` and are enforced by `tools/convention_check.py`.
 Before opening a PR, run `make check` and fix every blocking finding.
-Ground your work with the `diffusers-docs` MCP tool rather than memory.
+Ground your work with the `diffusers-docs` MCP tool (`search_docs`).
+If that tool is missing (Cloud Agents often do not load project
+`.cursor/mcp.json`), run `/search-docs <query>` or
+`python3 tools/docs_mcp_server.py --query "..."` — same server.
 
 ## Conventions
 
@@ -33,4 +36,5 @@ Do not import or copy code from outside this repository. `.cursorignore`
 marks paths that are off-limits as agent context.
 
 ## First task
-Scaffold a correct first contribution: `/scaffold scheduler <Name>`. See `.cursor/commands/scaffold.md`.
+Ground first (`/search-docs` or MCP `search_docs`), then scaffold:
+`/scaffold scheduler <Name>`. See `.cursor/commands/scaffold.md`.

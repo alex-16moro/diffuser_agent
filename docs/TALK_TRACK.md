@@ -25,25 +25,20 @@ you run the artifact **live**.
   templates, the QA checklist, and the CI workflow GitHub actually runs. They
   can't drift, because they're one source rendered several ways."
 
-### 8–20 min · Live demo (`make demo`) — the core
-Run it and narrate:
-1. **Catch the bad.** `examples/candidate_scheduler` — the from-memory first cut.
-   Gate returns 8 blocking + 2 warnings, each with a rule id and a fix hint.
-   Point at two *real* ones: `DEPR001` (import moved to `models.unets`) and
-   `SCHED003` (missing `@register_to_config` → can't round-trip from the Hub).
-   "A reviewer would have caught these on round three. The engineer got them in
-   two seconds, in-editor, via `.cursor/hooks.json`."
-2. **Pass the good.** `examples/scaffolded_scheduler` — 0 findings. "This is what
-   `/scaffold scheduler <Name>` emits. It gets the *contract* right and leaves the
-   *math* as a TODO — I'm not going to fake a numerical method."
-3. **Tests green.** `make test` — structural + signature contracts pass; the
-   behavioral contracts (config round-trip, timestep count, output type,
-   determinism) skip cleanly with no torch and run in CI. "Zero installs; the demo
-   can't die on a missing wheel."
-4. **Change a rule live (`make demo-maintain`).** Add a rule to `rules.yaml`,
-   rebuild, and show the agent rules + `AGENTS.md` + PM DoD + QA + CI all change
-   from one edit, then it restores itself. "This is the answer to 'what happens
-   when you're gone' — not a claim, a demo."
+### 8–22 min · Live contribution (`docs/LIVE_DEMO.md`) — the core
+This is the customer simulation: a new engineer making a first contribution.
+
+1. **Catch the bad.** `examples/candidate_scheduler` — 8 blocking + 2 warnings.
+   Point at `DEPR001` (import moved) and `SCHED003` (no `@register_to_config`).
+2. **Make the contribution live.** Primary: `/scaffold scheduler EulerLite` in
+   Cursor (Prompt A). Fallback: `make demo-contribute KEEP=1`. Open the new
+   file and the `TODO(engineer)` in `step`. "Contract, not the algorithm."
+3. **Gate + tests on the NEW files** — 0 findings; behavioral tests skip
+   without torch. Same script as the edit hook and GitHub Actions.
+4. **If time:** `make demo-maintain` — one YAML edit, every audience surface
+   updates. Otherwise save it for the 38-min maintainability beat.
+
+Do not run `KEEP=1` before the Cursor agent if you want the files to appear live.
 
 ### 20–30 min · Multi-audience + boundaries
 - Open `projections/pm/definition-of-done.md`, `qa/review-checklist.md`,

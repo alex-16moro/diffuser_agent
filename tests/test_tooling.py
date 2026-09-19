@@ -27,6 +27,17 @@ class TestMcpFraming(unittest.TestCase):
         self.assertIn("Content-Length", proc.stdout)
 
 
+class TestMcpLauncher(unittest.TestCase):
+    def test_project_mcp_json_uses_repo_root_wrapper(self):
+        cfg = json.loads((ROOT / ".cursor" / "mcp.json").read_text())
+        server = cfg["mcpServers"]["diffusers-docs"]
+        self.assertEqual(server.get("type"), "stdio")
+        self.assertEqual(server["command"], "bash")
+        self.assertEqual(server["args"], [".cursor/mcp-diffusers-docs.sh"])
+        self.assertTrue((ROOT / ".cursor" / "mcp-diffusers-docs.sh").is_file())
+        self.assertTrue((ROOT / ".cursor" / "commands" / "search-docs.md").is_file())
+
+
 class TestAfterFileEditHook(unittest.TestCase):
     def test_hook_reports_findings_on_candidate(self):
         payload = json.dumps({
@@ -84,6 +95,28 @@ class TestTest001Mentions(unittest.TestCase):
             ids = {f.rule_id for f in findings}
             self.assertIn("TEST001", ids)
             self.assertTrue(any("does not exercise" in f.message for f in findings if f.rule_id == "TEST001"))
+
+
+class TestDemoContribute(unittest.TestCase):
+    def test_create_gate_clean_then_remove(self):
+        name = "ToolingProbe"
+        stem = "scheduling_tooling_probe"
+        impl = ROOT / "src" / "diffusers" / "schedulers" / f"{stem}.py"
+        test = ROOT / "tests" / "schedulers" / f"test_{stem}.py"
+        self.addCleanup(lambda: impl.exists() and impl.unlink())
+        self.addCleanup(lambda: test.exists() and test.unlink())
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "demo_contribute.py"),
+             "--name", name, "--skip-bad-example"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        self.assertIn("0 findings", proc.stdout.lower() + proc.stderr.lower() or proc.stdout)
+        self.assertFalse(impl.exists(), "default run must not leave contribution files")
+        self.assertFalse(test.exists())
 
 
 if __name__ == "__main__":

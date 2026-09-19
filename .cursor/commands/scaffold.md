@@ -9,7 +9,15 @@ Follow this workflow in order. Do **not** rely on training memory for how diffus
 
 ## 0. Ground first
 
-Call the `diffusers-docs` MCP tool `search_docs` for the component contract (for a scheduler: `set_timesteps`, `step`, `SchedulerMixin`, `@register_to_config`). If MCP is unavailable, read `knowledge/diffusers-docs/` and `conventions/rules.yaml`. Cite what you grounded.
+Call the `diffusers-docs` MCP tool `search_docs` for the component contract (for a scheduler: `set_timesteps`, `step`, `SchedulerMixin`, `@register_to_config`).
+
+If `search_docs` is **not listed in your tools** (typical for Cloud Agents unless the MCP dropdown is enabled), use `/search-docs` or:
+
+```bash
+python3 tools/docs_mcp_server.py --query "scheduler set_timesteps step SchedulerMixin register_to_config"
+```
+
+That is the same process as the MCP server. Cite provenance. If snippets miss the contract, read `conventions/rules.yaml` — the gate is authoritative.
 
 Stay inside `.cursorignore`. Do not read or copy `examples/candidate_scheduler/` (it is the known-bad fixture).
 

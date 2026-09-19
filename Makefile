@@ -3,7 +3,7 @@
 
 PYTHON ?= python3
 
-.PHONY: help doctor build check check-json test mcp demo demo-maintain clean
+.PHONY: help doctor build check check-json test mcp demo demo-contribute demo-contribute-clean demo-maintain clean
 
 help:
 	@echo "diffusers Ramp Kit"
@@ -13,7 +13,9 @@ help:
 	@echo "  make check-json Same, machine-readable (CI / dashboards)"
 	@echo "  make test       Run the contract tests (zero third-party installs needed)"
 	@echo "  make mcp        Self-test the diffusers-docs MCP server (Cursor handshake)"
-	@echo "  make demo       The 90-second live demo: catch bad, pass good, MCP, tests"
+	@echo "  make demo       Catch the bad scheduler, pass the good one, MCP, tests"
+	@echo "  make demo-contribute  First-contribution journey (KEEP=1 leaves files)"
+	@echo "  make demo-contribute-clean  Remove the EulerLite contribution files"
 	@echo "  make demo-maintain  Prove req #4: add a rule, rebuild, watch it propagate"
 	@echo "  make clean      Remove generated projections"
 
@@ -21,8 +23,10 @@ doctor:
 	@command -v $(PYTHON) >/dev/null || (echo "Need python3 on PATH"; exit 1)
 	@$(PYTHON) -c "import yaml" 2>/dev/null || (echo "Need PyYAML: pip install -r requirements.txt"; exit 1)
 	@test -f .cursor/hooks.json && test -f .cursor/mcp.json && test -f .cursor/commands/scaffold.md && test -f .cursorignore \
-		|| (echo "Missing Cursor wiring (.cursor/hooks.json, mcp.json, commands/scaffold.md, .cursorignore)"; exit 1)
-	@echo "doctor OK: $(PYTHON) + PyYAML + Cursor files"
+		&& test -f .cursor/mcp-diffusers-docs.sh && test -f .cursor/commands/search-docs.md \
+		|| (echo "Missing Cursor wiring (hooks, mcp launcher, scaffold, search-docs, .cursorignore)"; exit 1)
+	@$(PYTHON) tools/docs_mcp_server.py --selftest >/dev/null
+	@echo "doctor OK: $(PYTHON) + PyYAML + Cursor files + MCP self-test"
 
 build:
 	$(PYTHON) tools/build_projections.py
@@ -51,6 +55,15 @@ demo:
 	$(PYTHON) tools/docs_mcp_server.py --selftest
 	@echo "\n========== 4. Contract tests (zero install) =========="
 	$(PYTHON) -m unittest discover -s tests -t . -v
+
+# Full contribution journey (plan → ground → scaffold → gate → test → CI).
+# Default: create, prove, delete (safe rehearsal / CI).
+# Live walkthrough: `make demo-contribute KEEP=1` then open the two files.
+demo-contribute:
+	$(PYTHON) tools/demo_contribute.py $(if $(KEEP),--keep,) $(if $(NAME),--name $(NAME),)
+
+demo-contribute-clean:
+	$(PYTHON) tools/demo_contribute.py --clean-only --name $(or $(NAME),EulerLite)
 
 # Requirement #4 made visible: add a rule, rebuild, show EVERY surface changed,
 # then restore. This is the "what happens when you're gone" answer, live.

@@ -102,11 +102,12 @@ pip install -r requirements.txt     # PyYAML; the only required dependency
 
 make doctor     # python3 + PyYAML + Cursor files present
 make build      # regenerate every audience surface from the registry
-make demo       # catch the bad scheduler, pass the good one, MCP, run the tests
+make demo              # catch the bad scheduler, pass the good one, MCP, tests
+make demo-contribute   # first-contribution journey (KEEP=1 leaves the new files)
 make check      # run the gate on the whole repo (exit code = # blocking)
 make test       # contract tests — zero third-party installs needed
 make mcp        # self-test the diffusers-docs MCP server (Content-Length handshake)
-make demo-maintain  # add a rule, rebuild, watch it propagate to every surface (req #4)
+make demo-maintain     # add a rule, rebuild, watch it propagate to every surface (req #4)
 ```
 
 The 90-second demo (`make demo`) shows the whole arc:
@@ -119,6 +120,10 @@ The 90-second demo (`make demo`) shows the whole arc:
    docs (Content-Length JSON-RPC, the stdio framing Cursor uses).
 4. Contract tests — green, with numeric determinism skipped cleanly when torch
    isn't installed.
+
+The **contribution** walkthrough (`docs/LIVE_DEMO.md`, `make demo-contribute`)
+is the customer simulation: catch the bad cut, ground in docs, scaffold a new
+scheduler, gate at 0 findings, tests, then QA/CI surfaces.
 
 ## What I deliberately scoped OUT (and why)
 
@@ -172,6 +177,7 @@ conventions/rules.yaml          the single source of truth (component-tagged)
 tools/convention_check.py       the runnable gate (AST + regex)
 tools/build_projections.py      renders every audience surface (per-component .mdc)
 tools/docs_mcp_server.py        the diffusers-docs MCP server (Content-Length JSON-RPC)
+tools/demo_contribute.py        CLI twin of the live `/scaffold` contribution
 knowledge/diffusers-docs/       seed doc corpus for the MCP (override with a real checkout)
 templates/                      scaffold templates + "add a component" guide
 src/diffusers/schedulers/       stand-in path `/scaffold` writes to
@@ -189,5 +195,6 @@ tests/                          contract tests + template
 .github/PULL_REQUEST_TEMPLATE.md
 projections/{pm,qa,devops}/     the multi-audience surfaces (generated)
 docs/ARCHITECTURE.md            design choices + trade-offs
+docs/LIVE_DEMO.md              timed contribution walkthrough (Cursor + CLI)
 docs/TALK_TRACK.md              the 45-min session + stakeholder defense
 ```
