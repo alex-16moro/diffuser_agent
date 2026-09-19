@@ -1,0 +1,15 @@
+# Approved context boundary for the coding agent (requirement 3).
+# Cursor will not feed these paths to the model. This is a CONTEXT boundary,
+# not a security sandbox — production still needs filesystem, network,
+# credential, and tool permissions.
+
+# The deliberately-broken first-cut. `make demo` still scans it via the gate;
+# keeping it out of agent context prevents copying known-bad patterns.
+examples/candidate_scheduler/
+
+# Noise and internals — not library source to copy from.
+.git/
+**/__pycache__/
+**/*.pyc
+.venv/
+convention-report.json
