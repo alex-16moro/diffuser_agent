@@ -11,7 +11,7 @@ Follow this workflow in order. Do **not** rely on training memory for how diffus
 
 Call the `diffusers-docs` MCP tool `search_docs` for the component contract (for a scheduler: `set_timesteps`, `step`, `SchedulerMixin`, `@register_to_config`).
 
-If `search_docs` is **not listed in your tools** (typical for Cloud Agents unless the MCP dropdown is enabled), use `/search-docs` or:
+If `search_docs` is **not listed in your tools** (typical for Cloud Agents unless the MCP dropdown is stdio `python3 -u .cursor/mcp-diffusers-docs.py`, with **no** `cwd` / `${workspaceFolder}`), use `/search-docs`, the `search-docs` skill, or:
 
 ```bash
 python3 tools/docs_mcp_server.py --query "scheduler set_timesteps step SchedulerMixin register_to_config"

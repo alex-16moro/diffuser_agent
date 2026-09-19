@@ -11,9 +11,11 @@ convention gate: the gate stops WRONG code; doc-search improves DISCOVERY.
 
 TRANSPORT: MCP stdio — JSON-RPC 2.0 with Content-Length framing (the LSP-style
 stdio Cursor uses), plus an NDJSON fallback for ad-hoc CLI testing. Cursor
-launches it from .cursor/mcp.json. Implemented with the standard library only,
-so it runs on a fresh clone / GPU-less CI with zero installs (a hard PyPI-free
-constraint we actually hit while building this).
+Desktop launches it from .cursor/mcp.json via .cursor/mcp-diffusers-docs.py
+(no ${workspaceFolder} — Cloud stdio does not expand it and cannot set cwd).
+Implemented with the standard library only, so it runs on a fresh clone /
+GPU-less CI with zero installs (a hard PyPI-free constraint we actually hit
+while building this).
 
 Methods implemented: initialize, notifications/initialized, ping, tools/list,
 tools/call (tool: search_docs).
@@ -59,7 +61,19 @@ def resolve_docs_root() -> tuple[Path, str]:
 DOCS_ROOT, DOCS_PROVENANCE = resolve_docs_root()
 
 PROTOCOL_VERSION = "2024-11-05"
-SERVER_INFO = {"name": "diffusers-docs", "version": "0.5.0"}
+SUPPORTED_PROTOCOL_VERSIONS = (
+    "2024-11-05",
+    "2025-03-26",
+    "2025-06-18",
+    "2025-11-25",
+)
+SERVER_INFO = {"name": "diffusers-docs", "version": "0.6.0"}
+INSTRUCTIONS = (
+    "Ground 'how does diffusers do X' in this repo before scaffolding. "
+    "Call search_docs (query + optional k). Results include provenance "
+    "(real checkout vs bundled snapshot). conventions/rules.yaml is the "
+    "authoritative gate if snippets miss a contract."
+)
 
 SEARCH_DOCS_TOOL = {
     "name": "search_docs",
@@ -123,37 +137,65 @@ def _format_hits(hits) -> str:
 # --------------------------------------------------------------------------- #
 # MCP stdio server                                                             #
 # --------------------------------------------------------------------------- #
+def _coerce_args(args):
+    """Cursor sometimes sends tool arguments as a JSON string."""
+    if isinstance(args, str):
+        try:
+            args = json.loads(args)
+        except json.JSONDecodeError:
+            return {"query": args}
+    return args if isinstance(args, dict) else {}
+
+
 def _handle(msg: dict):
     """Dispatch one JSON-RPC request; return a response dict or None (notify)."""
     method = msg.get("method")
     mid = msg.get("id")
 
     if method == "initialize":
+        requested = (msg.get("params") or {}).get("protocolVersion", PROTOCOL_VERSION)
+        version = requested if requested in SUPPORTED_PROTOCOL_VERSIONS else PROTOCOL_VERSION
         return {
             "jsonrpc": "2.0", "id": mid,
             "result": {
-                "protocolVersion": msg.get("params", {}).get("protocolVersion", PROTOCOL_VERSION),
-                "capabilities": {"tools": {}},
+                "protocolVersion": version,
+                "capabilities": {
+                    "tools": {"listChanged": False},
+                    "resources": {"listChanged": False},
+                    "prompts": {"listChanged": False},
+                },
                 "serverInfo": SERVER_INFO,
+                "instructions": INSTRUCTIONS,
             },
         }
-    if method in ("notifications/initialized", "initialized"):
+    if method in ("notifications/initialized", "initialized",
+                  "notifications/cancelled", "notifications/progress"):
         return None  # notification, no reply
     if method == "ping":
         return {"jsonrpc": "2.0", "id": mid, "result": {}}
+    if method == "logging/setLevel":
+        return {"jsonrpc": "2.0", "id": mid, "result": {}}
     if method == "tools/list":
         return {"jsonrpc": "2.0", "id": mid, "result": {"tools": [SEARCH_DOCS_TOOL]}}
+    if method == "resources/list":
+        return {"jsonrpc": "2.0", "id": mid, "result": {"resources": []}}
+    if method == "prompts/list":
+        return {"jsonrpc": "2.0", "id": mid, "result": {"prompts": []}}
     if method == "tools/call":
         params = msg.get("params", {})
         if params.get("name") != "search_docs":
             return {"jsonrpc": "2.0", "id": mid,
                     "error": {"code": -32602, "message": f"unknown tool {params.get('name')}"}}
-        args = params.get("arguments", {})
-        hits = search_docs(args.get("query", ""), int(args.get("k", 5)))
+        args = _coerce_args(params.get("arguments", {}))
+        try:
+            k = int(args.get("k", 5))
+        except (TypeError, ValueError):
+            k = 5
+        hits = search_docs(str(args.get("query", "")), k)
         return {"jsonrpc": "2.0", "id": mid,
                 "result": {"content": [{"type": "text", "text": _format_hits(hits)}],
                            "isError": False}}
-    # Unknown method
+    # Unknown method — never fail the handshake on optional list calls.
     if mid is not None:
         return {"jsonrpc": "2.0", "id": mid,
                 "error": {"code": -32601, "message": f"method not found: {method}"}}
@@ -223,6 +265,9 @@ def serve(stdin=None, stdout=None):
     """Run the MCP stdio loop (Content-Length framing, NDJSON fallback)."""
     stdin = stdin if stdin is not None else sys.stdin
     stdout = stdout if stdout is not None else sys.stdout
+    # Anything printed to stdout breaks Content-Length framing. Keep logs on stderr.
+    if stdout is sys.stdout:
+        sys.stdout.flush()
     while True:
         try:
             msg = _read_message(stdin)
@@ -275,22 +320,31 @@ def _selftest() -> int:
     import io
     reqs = [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize",
-         "params": {"protocolVersion": PROTOCOL_VERSION, "capabilities": {}}},
+         "params": {"protocolVersion": "2025-03-26", "capabilities": {}}},
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
-        {"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+        {"jsonrpc": "2.0", "id": 3, "method": "resources/list"},
+        {"jsonrpc": "2.0", "id": 4, "method": "prompts/list"},
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call",
          "params": {"name": "search_docs", "arguments": {"query": "scheduler set_timesteps step", "k": 2}}},
+        {"jsonrpc": "2.0", "id": 6, "method": "tools/call",
+         "params": {"name": "search_docs",
+                    "arguments": json.dumps({"query": "SchedulerMixin", "k": 1})}},
     ]
     stdin = io.BytesIO(b"".join(_frame(r) for r in reqs))
     stdout = io.BytesIO()
     serve(stdin, stdout)
     messages = _parse_framed(stdout.getvalue())
     assert messages[0]["result"]["serverInfo"]["name"] == "diffusers-docs", "initialize failed"
+    assert messages[0]["result"]["protocolVersion"] == "2025-03-26", "protocol negotiate failed"
     assert messages[1]["result"]["tools"][0]["name"] == "search_docs", "tools/list failed"
-    assert "content" in messages[2]["result"], "tools/call failed"
-    print("MCP self-test OK: initialize -> tools/list -> tools/call (Content-Length).")
+    assert messages[2]["result"]["resources"] == [], "resources/list should be empty, not an error"
+    assert messages[3]["result"]["prompts"] == [], "prompts/list should be empty, not an error"
+    assert "content" in messages[4]["result"], "tools/call failed"
+    assert "content" in messages[5]["result"], "tools/call JSON-string arguments failed"
+    print("MCP self-test OK: initialize -> list -> search_docs (Content-Length).")
     print("  tools/call returned:\n   ",
-          messages[2]["result"]["content"][0]["text"].replace("\n", "\n    ")[:400])
+          messages[4]["result"]["content"][0]["text"].replace("\n", "\n    ")[:400])
     return 0
 
 

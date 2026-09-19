@@ -28,14 +28,42 @@ class TestMcpFraming(unittest.TestCase):
 
 
 class TestMcpLauncher(unittest.TestCase):
-    def test_project_mcp_json_uses_repo_root_wrapper(self):
-        cfg = json.loads((ROOT / ".cursor" / "mcp.json").read_text())
+    def test_project_mcp_json_has_no_workspace_folder_var(self):
+        raw = (ROOT / ".cursor" / "mcp.json").read_text()
+        self.assertNotIn("${workspaceFolder}", raw)
+        self.assertNotIn("${workspaceFolderBasename}", raw)
+        cfg = json.loads(raw)
         server = cfg["mcpServers"]["diffusers-docs"]
         self.assertEqual(server.get("type"), "stdio")
-        self.assertEqual(server["command"], "bash")
-        self.assertEqual(server["args"], [".cursor/mcp-diffusers-docs.sh"])
+        self.assertEqual(server["command"], "python3")
+        self.assertEqual(server["args"], ["-u", ".cursor/mcp-diffusers-docs.py"])
+        self.assertTrue((ROOT / ".cursor" / "mcp-diffusers-docs.py").is_file())
         self.assertTrue((ROOT / ".cursor" / "mcp-diffusers-docs.sh").is_file())
         self.assertTrue((ROOT / ".cursor" / "commands" / "search-docs.md").is_file())
+        self.assertTrue((ROOT / ".cursor" / "skills" / "search-docs" / "SKILL.md").is_file())
+
+    def test_launcher_serves_from_unrelated_cwd(self):
+        """Cloud stdio has no cwd; the launcher must still find the server."""
+        sys.path.insert(0, str(ROOT / "tools"))
+        from docs_mcp_server import _frame  # noqa: WPS433
+
+        reqs = [
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+             "params": {"protocolVersion": "2025-03-26", "capabilities": {}}},
+            {"jsonrpc": "2.0", "method": "notifications/initialized"},
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        ]
+        proc = subprocess.run(
+            [sys.executable, "-u", str(ROOT / ".cursor" / "mcp-diffusers-docs.py")],
+            cwd=tempfile.gettempdir(),
+            input=b"".join(_frame(r) for r in reqs),
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8", "replace"))
+        self.assertIn(b"search_docs", proc.stdout)
+        self.assertNotIn(b"${workspaceFolder}", proc.stdout)
 
 
 class TestAfterFileEditHook(unittest.TestCase):

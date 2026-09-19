@@ -184,7 +184,8 @@ src/diffusers/schedulers/       stand-in path `/scaffold` writes to
 .cursor/rules/*.mdc             agent conventions (generated; 00-core + 10-<component>)
 .cursor/commands/scaffold.md    /scaffold <component> <Name> guided first task
 .cursor/hooks.json              afterFileEdit → the same gate CI runs
-.cursor/mcp.json                doc-search MCP wiring
+.cursor/mcp.json                doc-search MCP wiring (no ${workspaceFolder})
+.cursor/mcp-diffusers-docs.py   cwd-independent stdio launcher (Cloud-safe)
 .cursorignore                   approved context boundary (req. 3)
 AGENTS.md                       tool-agnostic mirror (generated)
 examples/candidate_scheduler/   the "from memory" first cut (fails the gate)

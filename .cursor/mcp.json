@@ -2,8 +2,11 @@
   "mcpServers": {
     "diffusers-docs": {
       "type": "stdio",
-      "command": "bash",
-      "args": [".cursor/mcp-diffusers-docs.sh"]
+      "command": "python3",
+      "args": ["-u", ".cursor/mcp-diffusers-docs.py"],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
     }
   }
 }

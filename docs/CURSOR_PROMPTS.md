@@ -11,8 +11,18 @@ primary, `make demo-contribute KEEP=1` as fallback).
 
 - **Doctor:** `make doctor` — python3, PyYAML, Cursor files, MCP self-test.
 - **Enable the MCP (Desktop):** Cursor → Settings → **MCP** → enable `diffusers-docs`.
-- **Cloud Agents:** project MCP is not auto-loaded. Use `/search-docs` or enable
-  the server in the launch MCP dropdown (`bash .cursor/mcp-diffusers-docs.sh`).
+  Config is `.cursor/mcp.json` (`python3 -u .cursor/mcp-diffusers-docs.py`). It
+  must **not** use `${workspaceFolder}` — Cloud stdio does not expand it.
+- **Cloud Agents:** project `.cursor/mcp.json` is **not** auto-loaded. In the
+  launch **MCP** dropdown add a **stdio** server (no `cwd` field):
+
+  ```
+  command: python3
+  args:    -u .cursor/mcp-diffusers-docs.py
+  ```
+
+  After environment install, `diffusers-docs-mcp` is also on PATH. If the tool
+  is still missing, `/search-docs` or the `search-docs` skill runs the same server.
 - **Confirm rules loaded:** the Agent sidebar should show `00-conventions`
   active; `10-scheduler` auto-attaches once a scheduler file is open.
 - **Optional, for green behavioral tests:** `pip install torch diffusers`. Without

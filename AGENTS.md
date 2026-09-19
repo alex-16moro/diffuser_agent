@@ -7,8 +7,9 @@ This repo uses convention-as-code. The authoritative rules live in
 `conventions/rules.yaml` and are enforced by `tools/convention_check.py`.
 Before opening a PR, run `make check` and fix every blocking finding.
 Ground your work with the `diffusers-docs` MCP tool (`search_docs`).
-If that tool is missing (Cloud Agents often do not load project
-`.cursor/mcp.json`), run `/search-docs <query>` or
+If that tool is missing (Cloud Agents skip project `.cursor/mcp.json`
+unless the MCP dropdown is `python3 -u .cursor/mcp-diffusers-docs.py`),
+run `/search-docs <query>`, the `search-docs` skill, or
 `python3 tools/docs_mcp_server.py --query "..."` — same server.
 
 ## Conventions

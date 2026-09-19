@@ -40,10 +40,19 @@ plan → ground → build → gate → test → review → CI clearance
 Pre-flight (before they sit):
 
 - Desktop: Settings → MCP → enable `diffusers-docs` (`.cursor/mcp.json`).
-- **Cloud Agent:** project `.cursor/mcp.json` is **not** loaded. Either enable
-  `diffusers-docs` in the MCP dropdown (Dashboard → Integrations, stdio:
-  `bash .cursor/mcp-diffusers-docs.sh`), or tell the agent to `/search-docs`
-  — that command always exists in the repo and runs the same server via CLI.
+- **Cloud Agent:** project `.cursor/mcp.json` is **not** loaded, and stdio
+  **cannot** use `cwd` or `${workspaceFolder}` (that is the connection
+  failure). Add a custom **stdio** MCP in the launch dropdown:
+
+  ```
+  name:    diffusers-docs
+  command: python3
+  args:    -u .cursor/mcp-diffusers-docs.py
+  ```
+
+  The launcher walks cwd / git root / `/workspace` to find the server. If
+  `search_docs` is still missing, `/search-docs` and the `search-docs` skill
+  are the same process via CLI.
 
 Paste **Prompt A** from `docs/CURSOR_PROMPTS.md`, or type:
 
