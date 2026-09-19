@@ -46,6 +46,7 @@ def copy_overlay(target: Path) -> None:
             shutil.copytree(src, dst)
 
     shutil.copy2(overlay / "mcp.json", cursor / "mcp.json")
+    shutil.copy2(overlay / "mcp.optional.json", cursor / "mcp.optional.json")
     for name in ("hooks.json", "mcp-diffusers-docs.py", "mcp-diffusers-docs.sh"):
         src = KIT / ".cursor" / name
         if src.exists():
@@ -78,7 +79,9 @@ def copy_overlay(target: Path) -> None:
 
     print(f"overlay attached at {target}")
     print("  Cloud Agent: launch ON this fork (main), install clones ramp-kit/")
-    print("  Do not overwrite upstream AGENTS.md / .ai/")
+    print("  Default MCP is empty; opt-in servers: .cursor/mcp.optional.json")
+    print("  Fork PRs: draft, title [fork demo — not for upstream]")
+    print("  Do not overwrite upstream AGENTS.md / .ai/; do not delete HF workflows")
 
 
 def main(argv=None) -> int:

@@ -6,38 +6,31 @@ separate repo: [alex-16moro/diffuser_agent](https://github.com/alex-16moro/diffu
 Cloud Agent install clones it to `ramp-kit/` (gitignored). Do not edit
 upstream `AGENTS.md` / `.ai/` — those stay Hugging Face's.
 
+PRs from this overlay are **fork-demo only, not for upstream**. Keep them draft
+and titled `[fork demo — not for upstream]`. Overlay clearance is the customer
+gate (`ramp-kit/tools/convention_check.py` on the new file). Upstream GitHub
+Actions may go red; that is expected — we do not claim Hugging Face's CI.
+
+## Grounding (default path — no MCP)
+
+1. Read `src/diffusers/schedulers/scheduling_euler_discrete.py` and
+   `scheduling_ddpm.py` (code beats the philosophy doc).
+2. Run the gate. `ramp-kit/conventions/rules.yaml` is authoritative.
+3. Optional CLI docs query (same server as MCP, no OAuth):
+
+```bash
+python3 ramp-kit/tools/docs_mcp_server.py --query "scheduler set_timesteps step SchedulerMixin register_to_config"
+```
+
+`.cursor/mcp.json` is **empty by default** so Cloud launches do not hit Hub
+OAuth or stdio cwd failures. Opt-in servers: `.cursor/mcp.optional.json`.
+
 ## Demo (Cloud Agent)
 
-1. Launch on **this repo** (`alex-16moro/diffusers`), branch `main`.
-2. Optional Hub MCP (HTTP, works on Cloud):
+1. On the **kit** first: `make demo-maintain` — one YAML edit, five surfaces.
+2. Then launch on **this fork** (`alex-16moro/diffusers`), overlay branch.
+3. Scaffold writes `src/diffusers/schedulers/scheduling_euler_lite.py` here.
+   Gate: `python3 ramp-kit/tools/convention_check.py <that file>` (never `--all`).
+4. Open the PR **on this fork**, not on huggingface/diffusers.
 
-```json
-{
-  "mcpServers": {
-    "huggingface": {
-      "url": "https://huggingface.co/mcp"
-    }
-  }
-}
-```
-
-3. Optional library-docs stdio (same VM; no OAuth):
-
-```json
-{
-  "mcpServers": {
-    "diffusers-docs": {
-      "type": "stdio",
-      "command": "python3",
-      "args": ["-u", "/workspace/.cursor/mcp-diffusers-docs.py"]
-    }
-  }
-}
-```
-
-4. Scaffold writes `src/diffusers/schedulers/scheduling_euler_lite.py` **in this
-   library**. Gate: `python3 ramp-kit/tools/convention_check.py <that file>`.
-5. Open the PR **on this fork**, not on huggingface/diffusers.
-
-Docs search uses `docs/source/en` in this checkout (real library docs).
-The catch-early fixture is `ramp-kit/examples/candidate_scheduler` — do not copy it.
+Catch-early fixture: `ramp-kit/examples/candidate_scheduler` — do not copy it.

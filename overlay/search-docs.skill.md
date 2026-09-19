@@ -1,6 +1,6 @@
 ---
 name: search-docs
-description: Ground in this diffusers checkout's docs (docs/source/en) via the overlay MCP/CLI. Use before scaffolding when search_docs is missing.
+description: Optional docs CLI for this diffusers checkout. Prefer scheduler source + the gate; MCP is opt-in.
 ---
 
 # Search this library's docs
@@ -10,5 +10,6 @@ python3 ramp-kit/tools/docs_mcp_server.py --query "<the question>"
 ```
 
 Cite provenance (`diffusers checkout` vs bundled snapshot). Prefer reading
-`src/diffusers/schedulers/scheduling_euler_discrete.py` when the contract is
-the question. `ramp-kit/conventions/rules.yaml` is the gate.
+`src/diffusers/schedulers/scheduling_euler_discrete.py` and
+`scheduling_ddpm.py` first. `ramp-kit/conventions/rules.yaml` is the gate.
+`.cursor/mcp.json` is empty by default.
