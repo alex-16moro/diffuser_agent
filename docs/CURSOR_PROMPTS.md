@@ -1,8 +1,54 @@
 # Cursor prompts — running the Ramp Kit live
 
-Copy-paste prompts for driving the kit inside Cursor (e.g. the live technical
-screen). Open **this repo root** as the Cursor workspace (the folder that
-contains `.cursor/` and `Makefile`).
+**Primary: Cloud Agent on [alex-16moro/diffusers](https://github.com/alex-16moro/diffusers)**
+(the library fork). This kit is `ramp-kit/` inside that VM.
+
+**Runbook:** `docs/LIVE_DEMO.md`.
+
+## Prompt A — first contribution ON THE FORK (paste this)
+
+Launch a **new** Cloud Agent on `alex-16moro/diffusers`, branch `main`. Optional
+MCP: Hugging Face HTTP `{"mcpServers":{"huggingface":{"url":"https://huggingface.co/mcp"}}}`
+and/or stdio `python3 -u /workspace/.cursor/mcp-diffusers-docs.py`.
+
+```
+You are a new engineer contributing to this huggingface/diffusers fork. A customer overlay (ramp-kit/, cloned from alex-16moro/diffuser_agent) encodes conventions as code. Do NOT rely on training memory. Do NOT open a PR against huggingface/diffusers — PR this fork.
+
+Repo facts:
+- This workspace IS the library (src/diffusers, docs/source/en, .ai/, AGENTS.md). Do not overwrite .ai/ or root AGENTS.md.
+- Overlay: ramp-kit/conventions/rules.yaml is the customer gate. python3 ramp-kit/tools/convention_check.py is CI-equivalent for overlay rules.
+- Ground in THIS checkout: read src/diffusers/schedulers/scheduling_euler_discrete.py and scheduling_ddpm.py. Then search docs via MCP search_docs if present, else:
+  python3 ramp-kit/tools/docs_mcp_server.py --query "scheduler set_timesteps step SchedulerMixin register_to_config"
+  Cite provenance (must be a diffusers checkout, not a bundled snapshot if docs/source/en exists).
+- Do not read or copy ramp-kit/examples/candidate_scheduler/ into the new files.
+
+Do these steps in order and narrate them:
+
+1. Catch-early:
+   python3 ramp-kit/tools/convention_check.py ramp-kit/examples/candidate_scheduler
+
+2. Scaffold EulerLiteScheduler:
+   - Copy ramp-kit/templates/scheduler/scheduling_TEMPLATE.py → src/diffusers/schedulers/scheduling_euler_lite.py
+   - Copy ramp-kit/tests/_templates/scheduler_test.py → tests/schedulers/test_scheduling_euler_lite.py (mention set_timesteps and step)
+   - Leave TODO(engineer) in step. Do not invent Euler math.
+
+3. Gate the NEW file only (never --all on this library):
+   python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_euler_lite.py
+
+4. python3 -m unittest tests.schedulers.test_scheduling_euler_lite -v
+   Behavioral skips without torch are expected.
+
+5. Open a PR on this fork with those two files. Report rule ids, grounding (source files + docs provenance), leftover math TODO, and that you did not copy the bad fixture.
+
+Stop at a clean overlay gate. Do not implement the sampler.
+```
+
+---
+
+## Kit-only rehearsal (this repo as a stand-in)
+
+Copy-paste prompts if you are opened on **diffuser_agent** instead of the fork.
+Open **this repo root** as the Cursor workspace (the folder that contains `.cursor/` and `Makefile`).
 
 **Runbook:** `docs/LIVE_DEMO.md` — the timed contribution journey (Cursor
 primary, `make demo-contribute KEEP=1` as fallback).

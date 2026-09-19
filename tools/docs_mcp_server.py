@@ -33,30 +33,11 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-BUNDLED = REPO_ROOT / "knowledge" / "diffusers-docs"
-
-
-def resolve_docs_root() -> tuple[Path, str]:
-    """Prefer a REAL diffusers checkout; fall back to the bundled snapshot.
-
-    Resolution order (first that exists wins):
-      1. $DIFFUSERS_DOCS_ROOT (explicit override)
-      2. a sibling/nested diffusers checkout's docs (./diffusers, ../diffusers)
-      3. the bundled seed corpus (reproducible offline demo fallback)
-
-    Returns (path, provenance) so callers can label results honestly instead of
-    claiming "version-correct" unconditionally.
-    """
-    env = os.environ.get("DIFFUSERS_DOCS_ROOT")
-    if env and Path(env).exists():
-        return Path(env), "configured checkout ($DIFFUSERS_DOCS_ROOT)"
-    for cand in (REPO_ROOT / "diffusers" / "docs" / "source" / "en",
-                 REPO_ROOT.parent / "diffusers" / "docs" / "source" / "en"):
-        if cand.exists():
-            return cand, "detected diffusers checkout"
-    return BUNDLED, "bundled snapshot (offline fallback — may lag upstream)"
-
+from library_paths import (  # noqa: E402
+    BUNDLED_DOCS as BUNDLED,
+    KIT_ROOT as REPO_ROOT,
+    resolve_docs_root,
+)
 
 DOCS_ROOT, DOCS_PROVENANCE = resolve_docs_root()
 

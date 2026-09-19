@@ -18,8 +18,9 @@ def _candidates():
     out: list[Path] = []
     here = Path(__file__).resolve().parent
     out.append(here.parent)  # repo root when this file lives in .cursor/
+    out.append(here.parent / "ramp-kit")
     cwd = Path.cwd().resolve()
-    out.extend([cwd, *cwd.parents])
+    out.extend([cwd, cwd / "ramp-kit", *cwd.parents])
     for key in ("CURSOR_PROJECT_DIR", "CURSOR_WORKSPACE", "WORKSPACE"):
         val = os.environ.get(key)
         if val:

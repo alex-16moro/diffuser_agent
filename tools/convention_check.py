@@ -47,7 +47,10 @@ except ImportError:  # pragma: no cover
     )
     sys.exit(2)
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+from library_paths import KIT_ROOT, resolve_library_root  # noqa: E402
+
+REPO_ROOT = KIT_ROOT  # overlay kit (rules, templates)
+LIBRARY_ROOT = resolve_library_root()  # fork when attached; kit stand-in otherwise
 RULES_PATH = REPO_ROOT / "conventions" / "rules.yaml"
 
 SEVERITY_ORDER = {"block": 0, "warn": 1, "info": 2}
@@ -298,8 +301,10 @@ def check_test_presence(rule, path, rel, source, tree):
     expected = glob.format(stem=stem)
     # Look both in the real repo layout and next to an example.
     candidates = [
+        LIBRARY_ROOT / expected,
         REPO_ROOT / expected,
         Path(path).parent.parent / "tests" / f"test_{stem}.py",
+        LIBRARY_ROOT / "tests" / f"test_{stem}.py",
         REPO_ROOT / "tests" / f"test_{stem}.py",
     ]
     found = next((c for c in candidates if c.exists()), None)
@@ -314,10 +319,13 @@ def check_test_presence(rule, path, rel, source, tree):
     text = found.read_text(encoding="utf-8", errors="replace")
     missing = [m for m in mentions if not re.search(rf"\b{re.escape(m)}\b", text)]
     if missing:
-        try:
-            shown = str(found.resolve().relative_to(REPO_ROOT))
-        except ValueError:
-            shown = str(found)
+        shown = str(found)
+        for root in (LIBRARY_ROOT, REPO_ROOT):
+            try:
+                shown = str(found.resolve().relative_to(root))
+                break
+            except ValueError:
+                continue
         out.append(Finding(
             rule.id, rule.severity, rel, 1,
             f"{shown} exists but does not exercise {', '.join(missing)}",
@@ -372,10 +380,13 @@ def gather_py_files(paths: list[str], scanning_all: bool = False) -> list[Path]:
 
 
 def relpath(p: Path) -> str:
-    try:
-        return str(p.resolve().relative_to(REPO_ROOT))
-    except ValueError:
-        return str(p)
+    resolved = p.resolve()
+    for root in (LIBRARY_ROOT, REPO_ROOT):
+        try:
+            return str(resolved.relative_to(root.resolve()))
+        except ValueError:
+            continue
+    return str(p)
 
 
 def check_file(path: Path, rules: list[Rule]) -> list[Finding]:

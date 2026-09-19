@@ -15,7 +15,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "tools"))
+_kit_tools = None
+for _cand in (ROOT / "ramp-kit" / "tools", ROOT / "tools"):
+    if (_cand / "convention_check.py").is_file():
+        _kit_tools = _cand
+        break
+sys.path.insert(0, str(_kit_tools or (ROOT / "tools")))
 
 from convention_check import check_file, load_rules, render_human  # noqa: E402
 
@@ -27,6 +32,7 @@ _SKIP_SUBSTR = (
     "/_templates/",
     "/templates/",
     "/__pycache__/",
+    "/ramp-kit/examples/candidate_scheduler/",
 )
 
 
