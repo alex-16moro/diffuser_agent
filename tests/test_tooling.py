@@ -86,5 +86,27 @@ class TestTest001Mentions(unittest.TestCase):
             self.assertTrue(any("does not exercise" in f.message for f in findings if f.rule_id == "TEST001"))
 
 
+class TestDemoContribute(unittest.TestCase):
+    def test_create_gate_clean_then_remove(self):
+        name = "ToolingProbe"
+        stem = "scheduling_tooling_probe"
+        impl = ROOT / "src" / "diffusers" / "schedulers" / f"{stem}.py"
+        test = ROOT / "tests" / "schedulers" / f"test_{stem}.py"
+        self.addCleanup(lambda: impl.exists() and impl.unlink())
+        self.addCleanup(lambda: test.exists() and test.unlink())
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "demo_contribute.py"),
+             "--name", name, "--skip-bad-example"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        self.assertIn("0 findings", proc.stdout.lower() + proc.stderr.lower() or proc.stdout)
+        self.assertFalse(impl.exists(), "default run must not leave contribution files")
+        self.assertFalse(test.exists())
+
+
 if __name__ == "__main__":
     unittest.main()

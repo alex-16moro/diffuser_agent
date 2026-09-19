@@ -4,6 +4,9 @@ Copy-paste prompts for driving the kit inside Cursor (e.g. the live technical
 screen). Open **this repo root** as the Cursor workspace (the folder that
 contains `.cursor/` and `Makefile`).
 
+**Runbook:** `docs/LIVE_DEMO.md` — the timed contribution journey (Cursor
+primary, `make demo-contribute KEEP=1` as fallback).
+
 ## Pre-flight (20 seconds, so nothing stalls live)
 
 - **Doctor:** `make doctor` — python3, PyYAML, and Cursor files present.
