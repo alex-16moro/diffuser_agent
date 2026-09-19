@@ -10,21 +10,22 @@ This workspace is `huggingface/diffusers` (fork). Overlay kit is `ramp-kit/`
 
 ## 0. Ground first
 
-Prefer **this checkout's source** over memory:
+Prefer **this checkout's source** over memory and over MCP:
 
 - `src/diffusers/schedulers/scheduling_euler_discrete.py`
 - `src/diffusers/schedulers/scheduling_ddpm.py`
 
-Then search docs. If MCP `search_docs` exists, call it. Else:
+Those files are the contract. `ramp-kit/conventions/rules.yaml` / the gate is
+authoritative if anything disagrees (the philosophy doc is stale).
+
+Optional docs CLI (MCP is opt-in; `.cursor/mcp.json` is empty by default):
 
 ```bash
 python3 ramp-kit/tools/docs_mcp_server.py --query "scheduler set_timesteps step SchedulerMixin register_to_config"
 ```
 
-Cite provenance. If snippets miss the contract, `ramp-kit/conventions/rules.yaml`
-and the two scheduler files above are authoritative.
-
-Do not read or copy `ramp-kit/examples/candidate_scheduler/` into the new files.
+Cite provenance if you run that. Do not read or copy
+`ramp-kit/examples/candidate_scheduler/` into the new files.
 
 ## 1. Paths (library layout, not the kit stand-in)
 

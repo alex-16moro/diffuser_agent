@@ -3,6 +3,10 @@
 Two parts: (A) the screen session, (B) the final-round role-play. Both assume
 you run the artifact **live**.
 
+**Sequence:** show **this kit** first, then switch to the **library fork**
+([alex-16moro/diffusers](https://github.com/alex-16moro/diffusers)). Do not
+open on the fork until they have seen the registry and the gate.
+
 ---
 
 ## A. The 45-minute screen (timeboxed)
@@ -18,29 +22,55 @@ you run the artifact **live**.
   rest of the team, PM/QA/DevOps, which is the gap the customer named."
 - "One decision drives everything: **conventions are data, not prose** — and they
   come from the repository, not model memory."
+- "Two repos, one overlay: this kit is the customer layer; the live write lands
+  on a **fork**, not on huggingface/diffusers. PRs are titled
+  `[fork demo — not for upstream]`."
 
 ### 5–8 min · The architecture in one breath
 - Show `conventions/rules.yaml`. "Humans edit only this. `make build` projects it
   into the agent's rules, `AGENTS.md`, the PM's Definition of Done, the issue/PR
   templates, the QA checklist, and the CI workflow GitHub actually runs. They
   can't drift, because they're one source rendered several ways."
+- **Anti-fragmentation (say this out loud):** "I did not add a tool per SDLC
+  step. Plan, build, review, test, and CI clearance are *projections of the same
+  YAML*. A sixth capability named 'deploy' would be fragmentation — I stop at
+  the gate, because I don't have the customer's deploy env."
 
-### 8–22 min · Live contribution (`docs/LIVE_DEMO.md`) — the core
-This is the customer simulation: a new engineer making a first contribution.
+### 8–22 min · Live contribution (`docs/LIVE_DEMO.md`) — kit first, then fork
+
+**8–12 min · this kit (overlay).** Do not launch the fork agent yet.
 
 1. **Catch the bad.** `examples/candidate_scheduler` — 8 blocking + 2 warnings.
    Point at `DEPR001` (import moved) and `SCHED003` (no `@register_to_config`).
-2. **Make the contribution live.** Primary: `/scaffold scheduler EulerLite` in
-   Cursor (Prompt A). Fallback: `make demo-contribute KEEP=1`. Open the new
-   file and the `TODO(engineer)` in `step`. "Contract, not the algorithm."
-3. **Gate + tests on the NEW files** — 0 findings; behavioral tests skip
-   without torch. Same script as the edit hook and GitHub Actions.
-4. **If time:** `make demo-maintain` — one YAML edit, every audience surface
-   updates. Otherwise save it for the 38-min maintainability beat.
+2. "This is the overlay. It is not the library. The gate is
+   `tools/convention_check.py`; the registry is `conventions/rules.yaml`."
+3. If the room is cold on Cursor: `make demo-contribute KEEP=1` as rehearsal.
+   Otherwise save the files-on-disk beat for the fork.
 
-Do not run `KEEP=1` before the Cursor agent if you want the files to appear live.
+**12–22 min · the fork (real library).** Launch / paste Prompt A on
+`alex-16moro/diffusers`. Overlay is `ramp-kit/` (gitignored clone).
 
-### 20–30 min · Multi-audience + boundaries
+1. **Ground in source, then the gate.** Open
+   `src/diffusers/schedulers/scheduling_euler_discrete.py` and
+   `scheduling_ddpm.py`. "Code beats the philosophy doc (`set_timesteps`, not
+   `set_num_inference_steps`). The gate is still the authority."
+2. **Scaffold.** `/scaffold scheduler EulerLite` writes
+   `src/diffusers/schedulers/scheduling_euler_lite.py`. Open the
+   `TODO(engineer)` in `step`. "Contract, not the algorithm."
+3. **File-scoped gate only** — never `--all` on this library. 0 findings on the
+   new file; behavioral tests skip without torch.
+4. **PR this fork**, draft, title `[fork demo — not for upstream]`. Overlay
+   clearance ≠ Hugging Face CI. We do **not** delete inherited workflow files.
+
+Do not run kit `KEEP=1` before the fork agent if you want those files to appear
+live on the fork.
+
+MCP is **not** this beat. Default overlay `.cursor/mcp.json` is empty so Cloud
+does not hit Hub OAuth or stdio cwd failures. Opt-in: `.cursor/mcp.optional.json`.
+If they ask how docs were searched: CLI
+`python3 ramp-kit/tools/docs_mcp_server.py --query "..."`.
+
+### 22–30 min · Multi-audience + boundaries
 - Open `projections/pm/definition-of-done.md`, `qa/review-checklist.md`,
   `.github/workflows/convention-gate.yml`, and `.github/ISSUE_TEMPLATE/contribution.md`.
   "Same rules. The PM's intake is the author's PR checklist is the CI gate.
@@ -54,17 +84,24 @@ Do not run `KEEP=1` before the Cursor agent if you want the files to appear live
 
 ### 30–38 min · Judgment: the design that scales, and what I skipped
 - "It's five fixed primitives driven by data — registry, gate, scaffold, docs
-  MCP, projections. Adding a component (model, pipeline) is registry rows + a
-  template, not a new command. That's `make build` regenerating a
-  `10-<component>.mdc` from a tag — I can show that live in under a minute."
-- "The doc-search MCP is real and Cursor-connectable — I'll run the handshake
-  (`make mcp` speaks Content-Length framing). What I skipped inside it is
-  *embeddings*; it ranks by keyword over curated docs.
-  Debuggable baseline first, embeddings if recall proves weak."
+  search (CLI / optional MCP), projections. Adding a component (model, pipeline)
+  is registry rows + a template, not a new command. That's `make build`
+  regenerating a `10-<component>.mdc` from a tag — I can show that live in
+  under a minute."
+- "I did not grow a capability per SDLC step. That is how these kits fragment."
+- "The fork overlay ships **empty MCP by default**. Cloud Agents skip project
+  `mcp.json`; stdio cannot set `cwd` or expand `${workspaceFolder}`; Hub HTTP
+  MCP is Hub search + OAuth, not library source. Grounding is Read/Grep on the
+  two scheduler files, then the gate. Keyword MCP/`--query` is opt-in on
+  Desktop (`mcp.optional.json`). I skipped *embeddings* inside that search —
+  keyword over curated docs first."
 - "I went deep on schedulers, not shallow on all three components, because
   schedulers have the crispest enforceable contract — the best proof."
 - "No auto-fix: on a numerical library, auto-fix is where you inject silent wrong
   corrections. Report-and-block first; mechanical auto-fix later."
+- "I left Hugging Face's inherited Actions alone. Disabling them by deleting
+  workflow files would look like I broke their CI; the honest story is overlay
+  clearance on a fork demo."
 
 ### 38–45 min · Where it breaks (lead with this, don't hide it)
 - "It checks structure, not the correctness of the math — by design; that's the
@@ -74,9 +111,10 @@ Do not run `KEEP=1` before the Cursor agent if you want the files to appear live
   (deterministic), renamed kwargs only *warn*, because a substring isn't proof of
   deprecation in a version. False positives destroy trust, so blocking rules need
   stronger evidence than warnings."
-- "The MCP defaults to a bundled snapshot offline; point it at a real checkout for
-  current coverage. Every result states its provenance, so I never overclaim
-  'version-correct'."
+- "The docs CLI defaults to a bundled snapshot when it isn't sitting on a real
+  checkout; every result states provenance, so I never overclaim 'version-correct'."
+- "Fork GitHub Actions may go red. That is Hugging Face's CI on a demo branch,
+  not a failed overlay gate."
 - Close: "If I don't know something — say, whether a convention still holds after
   a refactor — the honest move is to make it a rule and let the gate tell us."
 
@@ -139,6 +177,12 @@ This turns the single biggest risk to the thesis into its strongest proof.
 > "It won't judge whether the math is right — that stays human. I'd rather be
 > honest about that boundary than sell you an oracle. 'I don't know, here's how
 > I'd find out' is the posture I want on your account too."
+
+**"Why not MCP / embeddings / a tool per step?"**
+> "Grounding that survives a skeptical reviewer is the two scheduler source
+> files plus the gate. MCP on Cloud failed discovery and Hub OAuth is the wrong
+> corpus. Embeddings add a model I don't need for a 45-minute proof. A tool per
+> SDLC step is how the kit would fragment the moment you asked for deploy."
 
 ### If asked to extend it live (they said you'll reuse this)
 - Add a rule to `rules.yaml` (e.g. a new deprecated import), `make build`,

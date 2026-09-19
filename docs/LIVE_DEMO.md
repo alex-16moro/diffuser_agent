@@ -1,11 +1,14 @@
 # Live contribution demo — run this in the 45-minute screen
 
 Goal: show **how a new engineer makes a first contribution**, not how to use
-Diffusers. **Primary workspace: the library fork**
-[`alex-16moro/diffusers`](https://github.com/alex-16moro/diffusers). This kit
-(`diffuser_agent`) is cloned beside it as `ramp-kit/`.
+Diffusers.
 
-Two ways to play the same journey:
+**Talk order: kit first, then fork.** Open this repo (`diffuser_agent`) for the
+catch-early / registry beat. Only then launch a Cloud Agent on
+[`alex-16moro/diffusers`](https://github.com/alex-16moro/diffusers). The kit
+clones beside the library as `ramp-kit/`.
+
+Two ways to play the same journey after the kit beat:
 
 | Path | When |
 |------|------|
@@ -13,6 +16,10 @@ Two ways to play the same journey:
 | **B. CLI twin in this kit** (`make demo-contribute KEEP=1`) | Rehearsal if the fork VM is slow. Stand-in tree only. |
 
 Do **not** run Path B first if you want Path A to create the files live.
+
+PRs from Path A are **fork-demo only**. Title them
+`[fork demo — not for upstream]`. Do not PR huggingface/diffusers. Do not delete
+inherited Hugging Face workflow files.
 
 ---
 
@@ -24,33 +31,33 @@ plan → ground → build → gate → test → review → CI clearance
 
 | Step | Role | You show | You say |
 |------|------|----------|---------|
-| 0. Pre-flight | you | `make doctor` | “Python3, PyYAML, Cursor files present.” |
+| 0. Pre-flight | you | `make doctor` **on the kit** | “Python3, PyYAML, Cursor files present.” |
 | 1. Plan | PM + engineer | `.github/ISSUE_TEMPLATE/contribution.md` | “Done is the same checklist CI will run.” |
-| 2. Catch-early | QA / engineer | gate on `examples/candidate_scheduler` | “8 blocking: moved import, missing mixin, `.cuda()`, no test. That’s a review round-trip.” |
-| 3. Ground | engineer | MCP `search_docs` or `make mcp` | “Repo docs, not model memory. Gate is still the authority.” |
-| 4. Build | engineer | `/scaffold scheduler EulerLite` | “Contract stub. Math is TODO. I will not invent a sampler.” |
-| 5. Gate | engineer + CI | check the new file | “0 findings. Same script as the edit hook and GitHub Actions.” |
+| 2. Catch-early | QA / engineer | gate on kit `examples/candidate_scheduler` | “8 blocking: moved import, missing mixin, `.cuda()`, no test. That’s a review round-trip. This is the overlay, not the library.” |
+| 3. Ground | engineer | `scheduling_euler_discrete.py` + `scheduling_ddpm.py`, then the gate | “Code beats the philosophy doc. MCP is opt-in; default overlay MCP is empty.” |
+| 4. Build | engineer | `/scaffold scheduler EulerLite` **on the fork** | “Contract stub. Math is TODO. I will not invent a sampler.” |
+| 5. Gate | engineer + CI | check the **new file only** | “0 findings. Same script as the edit hook. Never `--all` on this library.” |
 | 6. Test | engineer | unittest on the new test | “Signatures pass; behavioral tests skip without torch — expected.” |
 | 7. Review | QA | `projections/qa/review-checklist.md` | “Gate took the mechanical items. Humans judge the paper.” |
-| 8. Clearance | DevOps | `.github/workflows/convention-gate.yml` | “Green = merge-eligible. I don’t fake deploy.” |
-| 9. Maintain | platform | `make demo-maintain` (if time) | “One YAML edit. I’m gone; they still own it.” |
+| 8. Clearance | DevOps | overlay gate green; HF Actions may be red | “Overlay clearance ≠ upstream CI. I don’t fake deploy, and I don’t disable their workflows.” |
+| 9. Maintain | platform | `make demo-maintain` on the **kit** (if time) | “One YAML edit. I’m gone; they still own it. Not a tool per SDLC step.” |
 
 ---
 
-## Path A — Cursor (primary, ~10–12 min)
+## Path A — Cursor on the fork (primary, ~10–12 min)
 
 Pre-flight (before they sit):
 
-- Desktop: Settings → MCP → enable `diffusers-docs` and/or Hugging Face HTTP
-  (`https://huggingface.co/mcp`).
+- **Kit (this repo):** `make doctor`. Catch-early fixture is here.
 - **Cloud Agent:** launch on **`alex-16moro/diffusers`**, branch `main` (not this
-  kit). Enable Hugging Face HTTP MCP if you want Hub search. Library docs stdio
-  is `python3 -u /workspace/.cursor/mcp-diffusers-docs.py` (no `cwd`, no
-  `${workspaceFolder}`, no OAuth). Catch-early fixture:
+  kit). Default overlay `.cursor/mcp.json` is `{ "mcpServers": {} }` — do **not**
+  enable Hub HTTP or stdio MCP for the demo. Grounding is Read/Grep on the two
+  scheduler files, then the file-scoped gate. Opt-in copy:
+  `.cursor/mcp.optional.json` (Desktop only). Catch-early fixture on the fork:
   `ramp-kit/examples/candidate_scheduler`.
 - Paste **Prompt A (fork)** from `docs/CURSOR_PROMPTS.md`.
 
-Paste **Prompt A** from `docs/CURSOR_PROMPTS.md`, or type:
+Then type:
 
 ```
 /scaffold scheduler EulerLite
@@ -59,16 +66,22 @@ Paste **Prompt A** from `docs/CURSOR_PROMPTS.md`, or type:
 Then have the agent (or you) run:
 
 ```bash
-python3 tools/convention_check.py examples/candidate_scheduler
-python3 tools/convention_check.py src/diffusers/schedulers/scheduling_euler_lite.py
+python3 ramp-kit/tools/convention_check.py ramp-kit/examples/candidate_scheduler
+python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_euler_lite.py
 python3 -m unittest tests.schedulers.test_scheduling_euler_lite -v
 ```
 
 Point at the `TODO(engineer)` in `step`. Stop. Do not fill in Euler math.
 
-If MCP is off: `python3 tools/docs_mcp_server.py --query "scheduler set_timesteps step"`.
+If they ask for a docs search without MCP:
+
+```bash
+python3 ramp-kit/tools/docs_mcp_server.py --query "scheduler set_timesteps step"
+```
 
 If `/scaffold` does not appear: open `.cursor/commands/scaffold.md` and say “it’s a guided command, not a binary,” then Path B.
+
+Open the PR **on this fork**, draft, title `[fork demo — not for upstream]`.
 
 ---
 
@@ -88,11 +101,12 @@ Default `make demo-contribute` **creates, proves, and deletes** (safe to run in 
 ## Timebox vs the rest of the 45 minutes
 
 - **0–5** problem (distributed conventions → review round-trips)
-- **5–8** `rules.yaml` → many surfaces
-- **8–22** this contribution journey (catch bad → scaffold → green gate)
-- **22–30** QA + issue template + CI + `.cursorignore`
-- **30–38** judgment (schedulers first, no embeddings, no auto-fix, stop at CI)
-- **38–45** where it breaks + `make demo-maintain` if not already shown
+- **5–8** `rules.yaml` → many surfaces (**not** a tool per SDLC step)
+- **8–12** **kit**: catch the bad fixture
+- **12–22** **fork**: source-ground → scaffold → file-scoped green gate
+- **22–30** QA + issue template + overlay CI vs inherited HF Actions
+- **30–38** judgment (schedulers first, empty default MCP, no embeddings, no auto-fix, stop at CI)
+- **38–45** where it breaks + `make demo-maintain` on the kit if not already shown
 
 If time is tight, skip maintain and skip Path A’s agent: run Path B with `KEEP=1` and still open the two files.
 

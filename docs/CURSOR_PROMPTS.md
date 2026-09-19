@@ -1,25 +1,34 @@
 # Cursor prompts — running the Ramp Kit live
 
-**Primary: Cloud Agent on [alex-16moro/diffusers](https://github.com/alex-16moro/diffusers)**
-(the library fork). This kit is `ramp-kit/` inside that VM.
+**Talk order: kit first, then fork.** Show `diffuser_agent` (registry + catch-early)
+before launching a Cloud Agent. **Primary live write:** Cloud Agent on
+[alex-16moro/diffusers](https://github.com/alex-16moro/diffusers). This kit is
+`ramp-kit/` inside that VM.
 
 **Runbook:** `docs/LIVE_DEMO.md`.
 
+Default overlay MCP is **empty**. Do not paste Hub HTTP or stdio MCP into the
+Cloud launch for this demo. Grounding is the two scheduler source files, then
+the file-scoped gate. Opt-in servers live in `overlay/mcp.optional.json`.
+
+---
+
 ## Prompt A — first contribution ON THE FORK (paste this)
 
-Launch a **new** Cloud Agent on `alex-16moro/diffusers`, branch `main`. Optional
-MCP: Hugging Face HTTP `{"mcpServers":{"huggingface":{"url":"https://huggingface.co/mcp"}}}`
-and/or stdio `python3 -u /workspace/.cursor/mcp-diffusers-docs.py`.
+Launch a **new** Cloud Agent on `alex-16moro/diffusers`, branch `main`. Leave
+MCP **off**.
 
 ```
-You are a new engineer contributing to this huggingface/diffusers fork. A customer overlay (ramp-kit/, cloned from alex-16moro/diffuser_agent) encodes conventions as code. Do NOT rely on training memory. Do NOT open a PR against huggingface/diffusers — PR this fork.
+You are a new engineer contributing to this huggingface/diffusers fork. A customer overlay (ramp-kit/, cloned from alex-16moro/diffuser_agent) encodes conventions as code. Do NOT rely on training memory. Do NOT open a PR against huggingface/diffusers — PR this fork, draft, title "[fork demo — not for upstream]".
 
 Repo facts:
-- This workspace IS the library (src/diffusers, docs/source/en, .ai/, AGENTS.md). Do not overwrite .ai/ or root AGENTS.md.
+- This workspace IS the library (src/diffusers, docs/source/en, .ai/, AGENTS.md). Do not overwrite .ai/ or root AGENTS.md. Do not delete .github/workflows from Hugging Face.
 - Overlay: ramp-kit/conventions/rules.yaml is the customer gate. python3 ramp-kit/tools/convention_check.py is CI-equivalent for overlay rules.
-- Ground in THIS checkout: read src/diffusers/schedulers/scheduling_euler_discrete.py and scheduling_ddpm.py. Then search docs via MCP search_docs if present, else:
-  python3 ramp-kit/tools/docs_mcp_server.py --query "scheduler set_timesteps step SchedulerMixin register_to_config"
-  Cite provenance (must be a diffusers checkout, not a bundled snapshot if docs/source/en exists).
+- Ground in THIS checkout, in this order:
+  1. Read src/diffusers/schedulers/scheduling_euler_discrete.py and scheduling_ddpm.py (code beats the philosophy doc).
+  2. Treat ramp-kit/conventions/rules.yaml / the gate as authoritative if anything disagrees.
+  3. Optional, only if asked: python3 ramp-kit/tools/docs_mcp_server.py --query "scheduler set_timesteps step SchedulerMixin register_to_config"
+  Do not wait for an MCP tool. Cite source file paths.
 - Do not read or copy ramp-kit/examples/candidate_scheduler/ into the new files.
 
 Do these steps in order and narrate them:
@@ -38,7 +47,7 @@ Do these steps in order and narrate them:
 4. python3 -m unittest tests.schedulers.test_scheduling_euler_lite -v
    Behavioral skips without torch are expected.
 
-5. Open a PR on this fork with those two files. Report rule ids, grounding (source files + docs provenance), leftover math TODO, and that you did not copy the bad fixture.
+5. Open a draft PR on this fork with those two files, titled "[fork demo — not for upstream]". Report rule ids, grounding (the two source files + gate), leftover math TODO, and that you did not copy the bad fixture.
 
 Stop at a clean overlay gate. Do not implement the sampler.
 ```
@@ -50,25 +59,22 @@ Stop at a clean overlay gate. Do not implement the sampler.
 Copy-paste prompts if you are opened on **diffuser_agent** instead of the fork.
 Open **this repo root** as the Cursor workspace (the folder that contains `.cursor/` and `Makefile`).
 
-**Runbook:** `docs/LIVE_DEMO.md` — the timed contribution journey (Cursor
-primary, `make demo-contribute KEEP=1` as fallback).
+**Runbook:** `docs/LIVE_DEMO.md` — kit catch-early first; Cursor on the fork
+primary; `make demo-contribute KEEP=1` as fallback.
 
 ## Pre-flight (20 seconds, so nothing stalls live)
 
-- **Doctor:** `make doctor` — python3, PyYAML, Cursor files, MCP self-test.
-- **Enable the MCP (Desktop):** Cursor → Settings → **MCP** → enable `diffusers-docs`.
-  Config is `.cursor/mcp.json` (`python3 -u .cursor/mcp-diffusers-docs.py`). It
-  must **not** use `${workspaceFolder}` — Cloud stdio does not expand it.
-- **Cloud Agents:** project `.cursor/mcp.json` is **not** auto-loaded. In the
-  launch **MCP** dropdown add a **stdio** server (no `cwd` field):
-
-  ```
-  command: python3
-  args:    -u .cursor/mcp-diffusers-docs.py
-  ```
-
-  After environment install, `diffusers-docs-mcp` is also on PATH. If the tool
-  is still missing, `/search-docs` or the `search-docs` skill runs the same server.
+- **Doctor:** `make doctor` — python3, PyYAML, Cursor files, MCP self-test,
+  overlay `mcp.json` empty.
+- **Kit Desktop MCP (optional, this repo only):** Cursor → Settings → **MCP** →
+  enable `diffusers-docs`. Config is `.cursor/mcp.json`
+  (`python3 -u .cursor/mcp-diffusers-docs.py`). It must **not** use
+  `${workspaceFolder}`.
+- **Fork / Cloud Agents:** overlay `.cursor/mcp.json` is `{ "mcpServers": {} }`.
+  Project MCP is **not** auto-loaded anyway. Do not add Hugging Face HTTP MCP
+  (Hub search + OAuth, wrong corpus) or stdio with `cwd` /
+  `${workspaceFolder}`. If you later opt in on Desktop, copy from
+  `.cursor/mcp.optional.json`.
 - **Confirm rules loaded:** the Agent sidebar should show `00-conventions`
   active; `10-scheduler` auto-attaches once a scheduler file is open.
 - **Optional, for green behavioral tests:** `pip install torch diffusers`. Without
@@ -77,19 +83,19 @@ primary, `make demo-contribute KEEP=1` as fallback).
 
 ---
 
-## Prompt A — the first-contribution demo (main)
+## Prompt A (kit stand-in) — rehearsal only
 
 ```
 You are onboarding onto this repo (a stand-in for huggingface/diffusers) and must
 follow its convention-as-code system. Do NOT rely on training memory for how
-diffusers works — this repo's rules and docs are the source of truth.
+diffusers works — this repo's rules are the source of truth.
 
 Context you must use (they're already in the repo):
 - conventions/rules.yaml is the single source of truth for all conventions.
 - The always-on rules in .cursor/rules/ and the auto-attached 10-scheduler rules
   are generated from it.
-- The `diffusers-docs` MCP tool (search_docs) is your grounding source — use it
-  before writing code. If it is not in your tool list, run `/search-docs` or
+- Ground the scheduler contract by reading examples/scaffolded_scheduler and the
+  rules tagged component: scheduler. Optional docs CLI (MCP is not required):
   `python3 tools/docs_mcp_server.py --query "scheduler set_timesteps step"`.
 - .cursorignore defines your approved context boundary — do not read or copy from
   outside it.
@@ -101,7 +107,7 @@ Do these steps in order and narrate what you're doing:
 
 2. Using the /scaffold workflow in .cursor/commands/scaffold.md, scaffold a NEW
    scheduler called `EulerLiteScheduler`:
-   - Ground the contract first with the diffusers-docs search_docs MCP tool.
+   - Ground the contract from the registry and the scaffolded reference, not from memory.
    - Create src/diffusers/schedulers/scheduling_euler_lite.py, satisfying every
      rule tagged `component: scheduler` in the registry.
    - Leave the numerical update rule as a clearly marked TODO — do NOT fabricate
@@ -115,7 +121,7 @@ Do these steps in order and narrate what you're doing:
 
 4. Run the tests: `python3 -m unittest discover -s tests -t .`
 
-5. Report: which rules you satisfied, what you grounded via the MCP, what the
+5. Report: which rules you satisfied, which files you grounded in, what the
    engineer still needs to implement (the math), and confirm you stayed within
    the .cursorignore boundary.
 
@@ -129,7 +135,8 @@ gate — don't invent numerical behaviour to make tests pass.
 Now demonstrate maintainability: run `make demo-maintain`. Explain what it shows —
 that one edit to conventions/rules.yaml regenerates the agent rules, AGENTS.md,
 the PM Definition of Done, the QA checklist, the issue/PR templates, and CI,
-then restores. This is the "what happens when you're gone" answer.
+then restores. This is the "what happens when you're gone" answer. It is one
+registry projected many ways — not a new tool per SDLC step.
 ```
 
 ## Prompt C — prove it scales to a new component (optional, advanced)
@@ -151,14 +158,18 @@ the tooling. Keep it minimal; do not implement a real model.
 
 ## What the interviewer should see
 
-- **Grounding:** the agent calls `search_docs` (MCP) before writing — reasoning
-  from the repo, not memory.
+- **Kit first, then fork:** catch-early on this repo; the write lands on the
+  real library tree.
+- **Grounding:** the agent reads `scheduling_euler_discrete.py` and
+  `scheduling_ddpm.py`, then the gate — reasoning from the repo, not memory.
+  MCP is opt-in, not the demo.
 - **Catch-early:** the gate flags the bad example by rule id, with fixes.
 - **Correct scaffold:** the new scheduler lands in `src/diffusers/schedulers/`
   and passes the gate at 0 findings; the math is an honest TODO, not fabricated.
+- **File-scoped gate:** never `convention_check.py --all` on the fork.
 - **Multi-audience:** open `projections/pm|qa|devops/` and `.github/` — same
-  rules, different surface. Note the upstream-vs-customer split.
+  rules, different surface. Note the upstream-vs-customer split. One registry,
+  many projections — not a capability per SDLC step.
+- **Fork PR hygiene:** draft, `[fork demo — not for upstream]`. Overlay green
+  does not mean Hugging Face CI is green; do not delete their workflows.
 - **Maintainability:** Prompt B — one edit propagates everywhere.
-
-If the MCP isn't enabled in time, the agent falls back to reading the repo files;
-the demo still works, you just lose the explicit "grounded via MCP" beat.

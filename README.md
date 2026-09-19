@@ -10,10 +10,12 @@ are no screenshots standing in for working software.
 
 **Two repos (both yours):** this overlay (`diffuser_agent`) plus a fork of the
 library ([alex-16moro/diffusers](https://github.com/alex-16moro/diffusers)).
-The live Cloud Agent demo launches **on the fork**. Install clones this kit to
-`ramp-kit/` and the gate/scaffold write into the real
-`src/diffusers/schedulers/` tree. Docs search uses the fork's `docs/source/en`.
-Do not PR huggingface/diffusers. See `overlay/OVERLAY.md`.
+The live Cloud Agent demo launches **on the fork** after you show **this kit**.
+Install clones this kit to `ramp-kit/` and the gate/scaffold write into the real
+`src/diffusers/schedulers/` tree. Grounding is the two scheduler source files
+plus the file-scoped gate — overlay `.cursor/mcp.json` is empty by default
+(opt-in: `overlay/mcp.optional.json`). Do not PR huggingface/diffusers. Fork
+PRs are titled `[fork demo — not for upstream]`. See `overlay/OVERLAY.md`.
 
 ---
 
@@ -129,16 +131,19 @@ The 90-second demo (`make demo`) shows the whole arc:
    isn't installed.
 
 The **contribution** walkthrough (`docs/LIVE_DEMO.md`, `make demo-contribute`)
-is the customer simulation: catch the bad cut, ground in docs, scaffold a new
-scheduler, gate at 0 findings, tests, then QA/CI surfaces.
+is the customer simulation: **kit first** (catch the bad cut), then **fork**
+(ground in scheduler source, scaffold, file-scoped gate, tests, QA/CI surfaces).
 
 ## What I deliberately scoped OUT (and why)
 
-- **Embeddings-based ranking for the MCP.** The doc-search MCP server is real and
-  Cursor-connectable (`tools/docs_mcp_server.py`, stdlib stdio JSON-RPC), but it
-  ranks by keyword TF over a curated corpus, not embeddings. Keyword search over
-  good docs is a strong, debuggable baseline with no model download; embeddings
-  are the upgrade if recall proves weak.
+- **Embeddings-based ranking / default MCP on the fork.** Kit Desktop still
+  ships stdio MCP (`tools/docs_mcp_server.py`). The **fork overlay** ships
+  empty `mcpServers` so Cloud launches do not hit Hub OAuth or stdio cwd
+  failures. Grounding is the two scheduler source files plus the gate;
+  keyword `--query` / `mcp.optional.json` is opt-in. Embeddings stay out:
+  keyword over curated docs is the debuggable baseline.
+- **A tool per SDLC step.** Plan/build/review/test/CI are projections of one
+  YAML. A sixth "deploy" capability would fragment the kit.
 - **Model/pipeline scaffolds.** I built the scheduler path end-to-end rather than
   a shallow version of all three. Schedulers have the crispest, most enforceable
   contract, so it's the best proof. Adding a component is now a documented
@@ -191,7 +196,9 @@ src/diffusers/schedulers/       stand-in path `/scaffold` writes to
 .cursor/rules/*.mdc             agent conventions (generated; 00-core + 10-<component>)
 .cursor/commands/scaffold.md    /scaffold <component> <Name> guided first task
 .cursor/hooks.json              afterFileEdit → the same gate CI runs
-.cursor/mcp.json                doc-search MCP wiring (no ${workspaceFolder})
+.cursor/mcp.json                kit Desktop MCP (stdio; no ${workspaceFolder})
+overlay/mcp.json                fork overlay default (empty mcpServers)
+overlay/mcp.optional.json       opt-in Hub HTTP + stdio for Desktop only
 .cursor/mcp-diffusers-docs.py   cwd-independent stdio launcher (Cloud-safe)
 .cursorignore                   approved context boundary (req. 3)
 AGENTS.md                       tool-agnostic mirror (generated)

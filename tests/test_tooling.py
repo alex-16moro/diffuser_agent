@@ -59,6 +59,33 @@ class TestMcpFraming(unittest.TestCase):
         self.assertIn("Content-Length", proc.stdout)
 
 
+class TestOverlayMcpDefaults(unittest.TestCase):
+    def test_overlay_mcp_json_is_empty(self):
+        cfg = json.loads((ROOT / "overlay" / "mcp.json").read_text())
+        self.assertEqual(cfg.get("mcpServers"), {})
+
+    def test_overlay_mcp_optional_lists_opt_in_servers(self):
+        raw = (ROOT / "overlay" / "mcp.optional.json").read_text()
+        self.assertNotIn("${workspaceFolder}", raw)
+        cfg = json.loads(raw)
+        servers = cfg["mcpServers"]
+        self.assertIn("diffusers-docs", servers)
+        self.assertIn("huggingface", servers)
+        stdio = servers["diffusers-docs"]
+        self.assertEqual(stdio.get("type"), "stdio")
+        self.assertEqual(stdio["command"], "python3")
+        self.assertEqual(stdio["args"], ["-u", "/workspace/.cursor/mcp-diffusers-docs.py"])
+        self.assertEqual(servers["huggingface"].get("url"), "https://huggingface.co/mcp")
+
+    def test_attach_copies_empty_default_and_optional(self):
+        src = (ROOT / "tools" / "attach_library.py").read_text()
+        self.assertIn('shutil.copy2(overlay / "mcp.json", cursor / "mcp.json")', src)
+        self.assertIn(
+            'shutil.copy2(overlay / "mcp.optional.json", cursor / "mcp.optional.json")',
+            src,
+        )
+
+
 class TestMcpLauncher(unittest.TestCase):
     def test_project_mcp_json_has_no_workspace_folder_var(self):
         raw = (ROOT / ".cursor" / "mcp.json").read_text()

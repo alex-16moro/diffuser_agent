@@ -29,7 +29,12 @@ doctor:
 		|| (echo "Missing Cursor wiring (hooks, mcp launcher, scaffold, search-docs, .cursorignore)"; exit 1)
 	@! grep -q workspaceFolder .cursor/mcp.json || (echo "mcp.json must not use workspaceFolder vars (Cloud stdio does not expand them)"; exit 1)
 	@test -f tools/attach_library.py && test -f overlay/OVERLAY.md \
+		&& test -f overlay/mcp.json && test -f overlay/mcp.optional.json \
 		|| (echo "Missing overlay attach tooling"; exit 1)
+	@$(PYTHON) -c "import json, pathlib; c=json.loads(pathlib.Path('overlay/mcp.json').read_text()); assert c.get('mcpServers') == {}, c" \
+		|| (echo "overlay/mcp.json must have empty mcpServers (Cloud default)"; exit 1)
+	@$(PYTHON) -c "import json, pathlib; s=json.loads(pathlib.Path('overlay/mcp.optional.json').read_text())['mcpServers']; assert 'diffusers-docs' in s and 'huggingface' in s, s" \
+		|| (echo "overlay/mcp.optional.json must list opt-in servers"; exit 1)
 	@$(PYTHON) tools/docs_mcp_server.py --selftest >/dev/null
 	@echo "doctor OK: $(PYTHON) + PyYAML + Cursor files + MCP self-test + overlay"
 
