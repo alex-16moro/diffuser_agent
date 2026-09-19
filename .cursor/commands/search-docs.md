@@ -2,8 +2,10 @@
 
 Usage: `/search-docs <query>`
 
-Cloud Agents often **do not load** project `.cursor/mcp.json`. If the
-`search_docs` MCP tool is not in your tool list, this command is the connection.
+Cloud Agents **do not load** project `.cursor/mcp.json`, and Cloud stdio
+**does not expand** `${workspaceFolder}` (that is why the tool goes missing).
+If `search_docs` is not in your tool list, this command is the connection.
+The Cloud dropdown paste is `python3 -u .cursor/mcp-diffusers-docs.py`.
 
 Run this exactly (do not invent an answer from memory):
 
