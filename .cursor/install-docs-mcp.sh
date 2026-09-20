@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Put `diffusers-docs-mcp` on PATH and copy the relative launcher into Cloud
-# workspace roots so `python3 -u .cursor/mcp-diffusers-docs.py` resolves when
-# stdio is spawned from /agent or /workspace (not the git repo).
+# Put `diffusers-docs-mcp` on PATH. Do not rely on copying into /agent/.cursor
+# — that directory is root-owned on Cloud. mcp.json boots via python3 -c and
+# globs /agent/repos/*/.cursor/mcp-diffusers-docs.py instead.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/.cursor/mcp-diffusers-docs.py"
 chmod +x "$SRC" "$ROOT/.cursor/mcp-diffusers-docs.sh" "$ROOT/.cursor/install-docs-mcp.sh"
+chmod +x "$ROOT/.cursor/mcp_stdio_boot.py" 2>/dev/null || true
 
 write_shim() {
   local dest="$1"
@@ -15,13 +16,7 @@ write_shim() {
 exec python3 -u "$SRC" --serve "\$@"
 EOF
   chmod +x "$dest"
-}
-
-copy_workspace_launcher() {
-  local dest_dir="$1"
-  mkdir -p "$dest_dir" 2>/dev/null || return 0
-  cp "$SRC" "$dest_dir/mcp-diffusers-docs.py" 2>/dev/null || return 0
-  chmod +x "$dest_dir/mcp-diffusers-docs.py" 2>/dev/null || true
+  echo "PATH shim: $dest"
 }
 
 write_shim "$HOME/.local/bin/diffusers-docs-mcp"
@@ -32,17 +27,11 @@ for rc in "$HOME/.profile" "$HOME/.bashrc"; do
   fi
   echo "$path_line" >> "$rc"
 done
-if mkdir -p /usr/local/bin 2>/dev/null && [ -w /usr/local/bin ]; then
+if [ -d /usr/local/bin ] && [ -w /usr/local/bin ]; then
   write_shim /usr/local/bin/diffusers-docs-mcp || true
 fi
 
-for ws in /agent /workspace "${CURSOR_WORKSPACE:-}" "${CURSOR_PROJECT_DIR:-}"; do
-  if [ -n "$ws" ] && [ -d "$ws" ]; then
-    copy_workspace_launcher "$ws/.cursor" || true
-  fi
-done
-
 echo "docs MCP launcher: $SRC"
 echo "PATH command: ${HOME}/.local/bin/diffusers-docs-mcp"
-echo "Cloud dropdown: diffusers-docs-mcp"
-echo "  (or: python3 -u .cursor/mcp-diffusers-docs.py)"
+echo "Cloud dropdown: python3 (mcp.json -c glob) or diffusers-docs-mcp"
+echo "Allowlist both python3 (mcp.json) and diffusers-docs-mcp (PATH shim)"

@@ -47,7 +47,12 @@ def copy_overlay(target: Path) -> None:
 
     shutil.copy2(overlay / "mcp.json", cursor / "mcp.json")
     shutil.copy2(overlay / "mcp.optional.json", cursor / "mcp.optional.json")
-    for name in ("hooks.json", "mcp-diffusers-docs.py", "mcp-diffusers-docs.sh"):
+    for name in (
+        "hooks.json",
+        "mcp-diffusers-docs.py",
+        "mcp-diffusers-docs.sh",
+        "mcp_stdio_boot.py",
+    ):
         src = KIT / ".cursor" / name
         if src.exists():
             shutil.copy2(src, cursor / name)

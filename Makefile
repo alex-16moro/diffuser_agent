@@ -35,10 +35,14 @@ doctor:
 	@test -f tools/attach_library.py && test -f overlay/OVERLAY.md \
 		&& test -f overlay/mcp.json && test -f overlay/mcp.optional.json \
 		|| (echo "Missing overlay attach tooling"; exit 1)
-	@$(PYTHON) -c "import json, pathlib; c=json.loads(pathlib.Path('overlay/mcp.json').read_text()); s=c['mcpServers']; assert 'diffusers-docs' in s and 'huggingface' not in s, c; assert s['diffusers-docs']['args']==['-u','.cursor/mcp-diffusers-docs.py'], s" \
-		|| (echo "overlay/mcp.json must be stdio diffusers-docs only (no Hub HTTP)"; exit 1)
+	@$(PYTHON) -c "import json, pathlib; c=json.loads(pathlib.Path('overlay/mcp.json').read_text()); s=c['mcpServers']; assert 'diffusers-docs' in s and 'huggingface' not in s, c; d=s['diffusers-docs']; assert d['command']=='python3' and '-c' in d['args'] and 'mcp-diffusers-docs.py' in d['args'][-1], d" \
+		|| (echo "overlay/mcp.json must be cwd-independent python3 -c stdio (no Hub HTTP)"; exit 1)
 	@$(PYTHON) -c "import json, pathlib; s=json.loads(pathlib.Path('overlay/mcp.optional.json').read_text())['mcpServers']; assert 'diffusers-docs' in s and 'huggingface' in s, s" \
 		|| (echo "overlay/mcp.optional.json must list opt-in servers"; exit 1)
+	@$(PYTHON) -c "import json,pathlib; cmds={e['command'] for e in json.loads(pathlib.Path('.cursor/environment.json').read_text())['mcpServerAllowlist']}; assert {'python3','diffusers-docs-mcp'} <= cmds, cmds" \
+		|| (echo "kit environment.json allowlist must include python3 and diffusers-docs-mcp"; exit 1)
+	@$(PYTHON) -c "import json,pathlib; cmds={e['command'] for e in json.loads(pathlib.Path('overlay/environment.json').read_text())['mcpServerAllowlist']}; assert {'python3','diffusers-docs-mcp'} <= cmds, cmds" \
+		|| (echo "overlay environment.json allowlist must include python3 and diffusers-docs-mcp"; exit 1)
 	@$(PYTHON) tools/docs_mcp_server.py --selftest >/dev/null
 	@test -f tools/grokbot_sim.py && test -f tools/verify_scheduler_contract.py \
 		&& test -f agents/grokbot-profiles.md && test -f .cursor/agents/grokbot-qa.md \

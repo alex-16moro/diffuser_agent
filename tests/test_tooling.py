@@ -137,7 +137,9 @@ class TestOverlayMcpDefaults(unittest.TestCase):
         stdio = servers["diffusers-docs"]
         self.assertEqual(stdio.get("type"), "stdio")
         self.assertEqual(stdio["command"], "python3")
-        self.assertEqual(stdio["args"], ["-u", ".cursor/mcp-diffusers-docs.py"])
+        self.assertIn("-c", stdio["args"])
+        self.assertIn("mcp-diffusers-docs.py", stdio["args"][-1])
+        self.assertIn("/agent/repos", stdio["args"][-1])
 
     def test_overlay_mcp_optional_lists_opt_in_servers(self):
         raw = (ROOT / "overlay" / "mcp.optional.json").read_text()
@@ -149,7 +151,8 @@ class TestOverlayMcpDefaults(unittest.TestCase):
         stdio = servers["diffusers-docs"]
         self.assertEqual(stdio.get("type"), "stdio")
         self.assertEqual(stdio["command"], "python3")
-        self.assertEqual(stdio["args"], ["-u", ".cursor/mcp-diffusers-docs.py"])
+        self.assertIn("-c", stdio["args"])
+        self.assertIn("mcp-diffusers-docs.py", stdio["args"][-1])
         self.assertEqual(servers["huggingface"].get("url"), "https://huggingface.co/mcp")
 
     def test_attach_copies_stdio_default_and_optional(self):
@@ -161,6 +164,65 @@ class TestOverlayMcpDefaults(unittest.TestCase):
         )
 
 
+class TestCloudMcpAllowlist(unittest.TestCase):
+    """Cloud spawn uses mcp.json's python3; allowlisting only the PATH shim blocks it."""
+
+    def _allowlist_commands(self, path: Path):
+        cfg = json.loads(path.read_text())
+        return [entry["command"] for entry in cfg["mcpServerAllowlist"]]
+
+    def test_kit_and_overlay_allowlist_match_mcp_json_command(self):
+        for path in (
+            ROOT / ".cursor" / "environment.json",
+            ROOT / "overlay" / "environment.json",
+        ):
+            cmds = self._allowlist_commands(path)
+            self.assertIn("python3", cmds, path)
+            self.assertIn("diffusers-docs-mcp", cmds, path)
+
+    def test_install_script_writes_path_shim(self):
+        with tempfile.TemporaryDirectory() as td:
+            home = Path(td) / "home"
+            home.mkdir()
+            proc = subprocess.run(
+                ["bash", str(ROOT / ".cursor" / "install-docs-mcp.sh")],
+                cwd=ROOT,
+                env={
+                    **os.environ,
+                    "HOME": str(home),
+                    "PATH": "/usr/bin:/bin",
+                },
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+            self.assertTrue((home / ".local" / "bin" / "diffusers-docs-mcp").is_file())
+
+    def test_mcp_json_handshake_from_agent_cwd(self):
+        """Cloud stdio cwd is /agent; relative .cursor/... must not be required."""
+        cfg = json.loads((ROOT / ".cursor" / "mcp.json").read_text())
+        server = cfg["mcpServers"]["diffusers-docs"]
+        reqs = [
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+             "params": {"protocolVersion": "2025-11-25", "capabilities": {}}},
+            {"jsonrpc": "2.0", "method": "notifications/initialized"},
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        ]
+        payload = "".join(json.dumps(r, separators=(",", ":")) + "\n" for r in reqs)
+        proc = subprocess.run(
+            [server["command"], *server["args"]],
+            cwd="/agent",
+            input=payload.encode("utf-8"),
+            capture_output=True,
+            timeout=10,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8", "replace"))
+        self.assertIn(b"search_docs", proc.stdout)
+        self.assertNotIn(b"Content-Length", proc.stdout)
+
+
 class TestMcpLauncher(unittest.TestCase):
     def test_project_mcp_json_has_no_workspace_folder_var(self):
         raw = (ROOT / ".cursor" / "mcp.json").read_text()
@@ -170,9 +232,11 @@ class TestMcpLauncher(unittest.TestCase):
         server = cfg["mcpServers"]["diffusers-docs"]
         self.assertEqual(server.get("type"), "stdio")
         self.assertEqual(server["command"], "python3")
-        self.assertEqual(server["args"], ["-u", ".cursor/mcp-diffusers-docs.py"])
+        self.assertIn("-c", server["args"])
+        self.assertIn("/agent/repos", server["args"][-1])
         self.assertTrue((ROOT / ".cursor" / "mcp-diffusers-docs.py").is_file())
         self.assertTrue((ROOT / ".cursor" / "mcp-diffusers-docs.sh").is_file())
+        self.assertTrue((ROOT / ".cursor" / "mcp_stdio_boot.py").is_file())
         self.assertTrue((ROOT / ".cursor" / "commands" / "search-docs.md").is_file())
         self.assertTrue((ROOT / ".cursor" / "skills" / "search-docs" / "SKILL.md").is_file())
 
@@ -683,11 +747,13 @@ class TestAttachEmptyMcp(unittest.TestCase):
             cfg = json.loads((fake / ".cursor" / "mcp.json").read_text())
             self.assertIn("diffusers-docs", cfg.get("mcpServers", {}))
             self.assertNotIn("huggingface", cfg.get("mcpServers", {}))
-            self.assertEqual(
-                cfg["mcpServers"]["diffusers-docs"]["args"],
-                ["-u", ".cursor/mcp-diffusers-docs.py"],
+            self.assertIn("-c", cfg["mcpServers"]["diffusers-docs"]["args"])
+            self.assertIn(
+                "/agent/repos",
+                cfg["mcpServers"]["diffusers-docs"]["args"][-1],
             )
             self.assertTrue((fake / ".cursor" / "mcp.optional.json").is_file())
+            self.assertTrue((fake / ".cursor" / "mcp_stdio_boot.py").is_file())
             self.assertNotIn("AGENTS.md", [p.name for p in fake.iterdir()])
             wf = (fake / ".github" / "workflows" / "ramp-kit-overlay.yml").read_text()
             self.assertIn("ramp-kit-overlay", wf)
