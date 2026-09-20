@@ -13,6 +13,9 @@ build_projections.py — render every audience surface from conventions/rules.ya
   .github/workflows/convention-gate.yml  (the workflow GitHub actually runs)
   .github/PULL_REQUEST_TEMPLATE.md       (author / reviewer)
   .github/ISSUE_TEMPLATE/contribution.md (PM planning)
+  agents/grokbot-{pm,qa,devops}.md       (GrokBot specs; read-side)
+  agents/grokbot-profiles.md             (paste-ready iPhone / desktop profiles)
+  .cursor/agents/grokbot-*.md            (Cursor subagents if Grok Bot spawns a Cloud Agent)
 
 SCALING PROOF: the per-component rule files are generated from each rule's
 `component:` tag. Add rules tagged `component: model` and a `10-model.mdc`
@@ -23,6 +26,7 @@ It also validates that every rule's `check` is implemented in convention_check
 """
 from __future__ import annotations
 
+import json
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -42,20 +46,29 @@ COMPONENTS = META.get("components", {})
 BANNER = "<!-- GENERATED from conventions/rules.yaml by tools/build_projections.py. DO NOT EDIT. Run `make build`. -->"
 BANNER_HASH = "# GENERATED from conventions/rules.yaml by tools/build_projections.py. DO NOT EDIT. Run `make build`."
 ALLOWED_OWNERS = ("dev", "architect", "qa", "pm", "devops")
+KIT_REPO = "https://github.com/alex-16moro/diffuser_agent"
+# Paste order for the iPhone pack: QA is the live-demo role.
+GROKBOT_PACK_ORDER = ("qa", "pm", "devops")
 GROKBOT_ROLES = {
     "pm": {
+        "bot_name": "Ramp Kit PM",
+        "bot_title": "Status digest",
         "title": "PM status digest",
         "job": "Turn the gate/CI output for this change into a ship/no-ship status digest a PM can read in one minute.",
         "reads": "convention_check --json, CI conclusion, the issue/PR change record, owner=pm rows in the registry.",
         "output": "status digest: blocking count, DoD items still open, whether the change is merge-eligible.",
     },
     "qa": {
+        "bot_name": "Ramp Kit QA",
+        "bot_title": "Risk briefing",
         "title": "QA risk briefing",
         "job": "Turn the gate/CI output for this change into a risk briefing: what is machine-blocked, what tests are weak, what still needs a human.",
         "reads": "convention_check --json, CI conclusion, the change record, owner=qa rows in the registry.",
         "output": "risk briefing: QA-owned blocking findings first, other blocks, residual human-only risk (math, duplication).",
     },
     "devops": {
+        "bot_name": "Ramp Kit DevOps",
+        "bot_title": "Health signal",
         "title": "DevOps health signal",
         "job": "Turn the gate/CI output for this change into a health/signal: will CI stay green, did generated surfaces drift, is the overlay still attachable.",
         "reads": "convention_check --json, CI conclusion (including projection-drift and contract re-verify), owner=devops rows in the registry.",
@@ -357,6 +370,7 @@ def build_devops():
         "  fails if fork reference source drifted from SCHED001–003.",
         "- Rules carry an `owner` tag (`dev` / `architect` / `qa` / `pm` / `devops`).",
         "  GrokBot role-agents translate gate JSON for that owner; they never gate.",
+        "  iPhone/desktop: paste `agents/grokbot-profiles.md` into the Grok Bot app.",
         "",
         "## Owner-tagged rules (devops)",
     ]
@@ -424,6 +438,45 @@ def build_github_templates():
     write(ROOT / ".github" / "ISSUE_TEMPLATE" / "contribution.md", "\n".join(issue))
 
 
+def _owned_ids(role: str) -> str:
+    ids = [r["id"] for r in _by_owner(role)]
+    return ", ".join(ids) if ids else "(none)"
+
+
+def _grokbot_profile_description(role: str, spec: dict) -> str:
+    return (
+        f"You are {spec['bot_name']} for the huggingface/diffusers Ramp Kit "
+        f"({KIT_REPO}).\n\n"
+        "Standing orders — do not violate:\n"
+        "- You TRANSLATE convention_check / CI output. You never gate, never "
+        "fail a job, never merge, never post to Slack/Jira/GitHub.\n"
+        f"- After clone, the authoritative spec is agents/grokbot-{role}.md "
+        f"(generated from conventions/rules.yaml where owner: {role}).\n"
+        "- To brief a change: python3 tools/convention_check.py --json <path> "
+        f"|| true, then python3 tools/grokbot_sim.py --role {role}.\n"
+        f"- Output shape: {spec['output']}\n\n"
+        f"Job: {spec['job']}\n"
+        f"Reads: {spec['reads']}\n"
+        f"Owner-tagged rules you speak for: {_owned_ids(role)}\n\n"
+        "If the user is on iPhone, keep replies short. Ask for a path or "
+        "pasted gate JSON. If /workspace/diffuser_agent is missing, clone "
+        "the repo there first."
+    )
+
+
+def _grokbot_first_message(role: str, spec: dict) -> str:
+    return (
+        f"You are {spec['bot_name']}. Standing orders: read-side only — "
+        "never gate, never merge.\n\n"
+        f"1. If /workspace/diffuser_agent is missing, clone {KIT_REPO} "
+        "into /workspace/diffuser_agent.\n"
+        f"2. Read agents/grokbot-{role}.md.\n"
+        f"3. Confirm role={role}, owned rule ids, and that you only "
+        "translate gate JSON.\n"
+        "4. Wait for a file path or pasted convention_check --json."
+    )
+
+
 def build_grokbot_specs():
     """READ-side role agents. Prompt body is the owner-tagged rules; they never gate."""
     for role, spec in GROKBOT_ROLES.items():
@@ -432,8 +485,11 @@ def build_grokbot_specs():
             BANNER, "",
             f"# GrokBot {role.upper()} — {spec['title']}",
             "",
-            "> **Simulation / read-side view.** This agent TRANSLATES gate and CI",
-            "> output. It never decides, never fails a job, never merges.",
+            "> **Read-side view.** This agent TRANSLATES gate and CI output.",
+            "> It never decides, never fails a job, never merges.",
+            "> iPhone / desktop Grok Bot: paste the matching block in",
+            "> `agents/grokbot-profiles.md` (see `docs/GROKBOT.md`).",
+            "> The reproducible briefing remains `tools/grokbot_sim.py`.",
             "",
             "## Job",
             spec["job"],
@@ -459,7 +515,7 @@ def build_grokbot_specs():
             lines.append(f"- Done: {r['dod']}")
             lines.append("")
         lines.extend([
-            "## How to run the simulation",
+            "## How to run the briefing (CLI, reproducible)",
             "",
             "```bash",
             f"python tools/convention_check.py --json examples/candidate_scheduler "
@@ -467,8 +523,106 @@ def build_grokbot_specs():
             f"python tools/grokbot_sim.py --role {role} < /tmp/gate.json",
             "```",
             "",
+            "## Grok Bot app (iPhone / desktop)",
+            "",
+            f"Create a Bot named **{spec['bot_name']}**, title **{spec['bot_title']}**.",
+            "Paste the Description + first message from `agents/grokbot-profiles.md`.",
+            "The app does not import this file from git — paste is the wiring.",
+            "",
         ])
         write(ROOT / "agents" / f"grokbot-{role}.md", "\n".join(lines))
+    build_grokbot_profiles()
+    build_cursor_grokbot_agents()
+
+
+def build_grokbot_profiles():
+    """Paste-ready Name / Title / Description / first message for the Grok Bot app."""
+    lines = [
+        BANNER, "",
+        "# Grok Bot profiles (iPhone + desktop)",
+        "",
+        "Cursor **Grok Bot** (App Store id `6794501026`, also desktop) does",
+        "**not** import these files from git. Create three Bots in the app,",
+        "signed in with the same Cursor account, then paste each block into",
+        "**Bot actions → Edit Profile** (Name, Title, Description). Send the",
+        "first message as the opening chat. Steps: `docs/GROKBOT.md`.",
+        "",
+        "Standing order for every Bot: **translate gate JSON; never gate;",
+        "never merge.** The reproducible briefing remains",
+        "`make grokbot ROLE=qa` / `tools/grokbot_sim.py`.",
+        "",
+        f"Kit: `{KIT_REPO}`",
+        "",
+    ]
+    for role in GROKBOT_PACK_ORDER:
+        spec = GROKBOT_ROLES[role]
+        lines.extend([
+            "---",
+            "",
+            f"## {spec['bot_name']}",
+            "",
+            f"**Name:** `{spec['bot_name']}`",
+            "",
+            f"**Title:** `{spec['bot_title']}`",
+            "",
+            "**Description** (paste into Edit Profile):",
+            "",
+            "```",
+            _grokbot_profile_description(role, spec),
+            "```",
+            "",
+            "**First iPhone message** (send after creating the Bot):",
+            "",
+            "```",
+            _grokbot_first_message(role, spec),
+            "```",
+            "",
+        ])
+    lines.extend([
+        "---",
+        "",
+        "Print this file with `make grokbot-pack`. After a registry edit,",
+        "`make build` regenerates these profiles from `owner:` tags.",
+        "",
+    ])
+    write(ROOT / "agents" / "grokbot-profiles.md", "\n".join(lines))
+
+
+def build_cursor_grokbot_agents():
+    """Cursor subagents so a Cloud Agent spawned from Grok Bot can invoke the roles."""
+    agents_dir = ROOT / ".cursor" / "agents"
+    for role, spec in GROKBOT_ROLES.items():
+        desc = (
+            f"{spec['bot_name']}. Translate convention_check JSON into a "
+            f"{spec['bot_title'].lower()}. Use when asked for a {role} view of "
+            "gate or CI output. Read-only; never merge."
+        )
+        body = "\n".join([
+            "---",
+            f"name: grokbot-{role}",
+            f"description: {json.dumps(desc)}",
+            "model: inherit",
+            "readonly: true",
+            "---",
+            "",
+            BANNER,
+            "",
+            f"You are {spec['bot_name']} ({spec['title']}).",
+            "",
+            "Standing orders: TRANSLATE gate/CI output. Never gate, never fail",
+            "a job, never merge. Authoritative spec: `agents/grokbot-"
+            f"{role}.md`. Reproducible briefing:",
+            "",
+            "```bash",
+            f"python tools/convention_check.py --json <path> > /tmp/gate.json || true",
+            f"python tools/grokbot_sim.py --role {role} /tmp/gate.json",
+            "```",
+            "",
+            f"Output shape: {spec['output']}",
+            f"Owner-tagged rules: {_owned_ids(role)}",
+            "",
+        ])
+        write(agents_dir / f"grokbot-{role}.md", body)
 
 
 def validate_sync():
