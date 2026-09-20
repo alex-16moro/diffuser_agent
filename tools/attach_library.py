@@ -2,8 +2,8 @@
 """Copy the Ramp Kit overlay into a huggingface/diffusers checkout.
 
 Does NOT replace the library's AGENTS.md / .ai/ — those stay upstream.
-Adds Cursor rules, the gate hook, MCP launcher, and Cloud environment install
-that clones this kit as `ramp-kit/` at VM boot.
+Adds Cursor rules, the gate hook, empty default MCP, and Cloud environment
+install that clones this kit as `ramp-kit/` at VM boot.
 
 Usage:
   python3 tools/attach_library.py --target /path/to/diffusers
@@ -17,6 +17,16 @@ import sys
 from pathlib import Path
 
 KIT = Path(__file__).resolve().parent.parent
+
+# Leftover docs-MCP launchers from older overlays. Unlink on attach so the
+# fork default stays empty even when those files were copied previously.
+_STALE_MCP = (
+    "mcp.optional.json",
+    "mcp-diffusers-docs.py",
+    "mcp-diffusers-docs.sh",
+    "mcp_stdio_boot.py",
+    "install-docs-mcp.sh",
+)
 
 
 def _is_library(root: Path) -> bool:
@@ -46,11 +56,13 @@ def copy_overlay(target: Path) -> None:
             shutil.copytree(src, dst)
 
     shutil.copy2(overlay / "mcp.json", cursor / "mcp.json")
-    shutil.copy2(overlay / "mcp.optional.json", cursor / "mcp.optional.json")
-    for name in ("hooks.json", "mcp-diffusers-docs.py", "mcp-diffusers-docs.sh"):
-        src = KIT / ".cursor" / name
-        if src.exists():
-            shutil.copy2(src, cursor / name)
+    for name in _STALE_MCP:
+        path = cursor / name
+        if path.exists():
+            path.unlink()
+    hooks = KIT / ".cursor" / "hooks.json"
+    if hooks.exists():
+        shutil.copy2(hooks, cursor / "hooks.json")
 
     shutil.copy2(overlay / "environment.json", cursor / "environment.json")
     shutil.copy2(overlay / "cursorignore", target / ".cursorignore")
@@ -88,7 +100,8 @@ def copy_overlay(target: Path) -> None:
 
     print(f"overlay attached at {target}")
     print("  Cloud Agent: launch ON this fork (main), install clones ramp-kit/")
-    print("  Default MCP: stdio diffusers-docs (no Hub HTTP). Cloud dropdown: diffusers-docs-mcp")
+    print("  Default MCP: empty ({mcpServers: {}}). Grounding is .ai/ + source")
+    print("  Optional docs CLI: python3 ramp-kit/tools/docs_mcp_server.py --query")
     print("  Fork PRs: draft, title [fork demo — not for upstream]")
     print("  Overlay CI: .github/workflows/ramp-kit-overlay.yml (file-scoped, never --all)")
     print("  Library CI: invoke make style / make quality / check_copies / check_dummies")

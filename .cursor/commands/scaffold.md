@@ -5,15 +5,25 @@ Usage: `/scaffold <component> <Name>`
 - `$1` = component. Today the registry ships `scheduler`. Adding `model` or `pipeline` is a data change (see `templates/README.md`), not a new command.
 - `$2` = PascalCase name **without** the type suffix. Example: `EulerLite` → class `EulerLiteScheduler`, file `scheduling_euler_lite.py`. If those files already exist, pick a new unused `$2`.
 
-Done is what `conventions/rules.yaml` checks **and**, on a real library checkout, what the library's own CI checks. Copy the templates. Do not start from a blank file, from library scheduler source, or from a docs search.
+Done is what `conventions/rules.yaml` checks **and**, on a real library checkout, what the library's own CI checks. Copy the templates. Do not start from a blank file or from library scheduler source.
 
-## 0. Ground in the registry
+## 0. Ground in the registry (and the library guide)
 
 Read `conventions/rules.yaml`. Blocking ids for this contribution: SCHED001,
 SCHED002, SCHED003, REPRO001, DEVICE001, DEPR001, MUT001, TEST001, TEST002.
 
-The templates already satisfy them. Stay inside `.cursorignore`. Do not read or
-copy `examples/candidate_scheduler/` (known-bad fixture).
+On a library checkout, also read root `AGENTS.md` and `.ai/` (do not overwrite
+them) plus the reference source those files name. Optional keyword search:
+
+```bash
+python3 tools/docs_mcp_server.py --query "set_timesteps"
+```
+
+That CLI is a fallback, not a deliverable. Default `.cursor/mcp.json` has no
+servers.
+
+The templates already satisfy the registry. Stay inside `.cursorignore`. Do not
+read or copy `examples/candidate_scheduler/` (known-bad fixture).
 
 ## 1. Name the files
 

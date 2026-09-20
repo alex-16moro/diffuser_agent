@@ -1,13 +1,6 @@
 {
   "install": "bash .cursor/cloud-install.sh",
-  "start": "bash .cursor/install-docs-mcp.sh",
   "repositoryDependencies": [
     "github.com/alex-16moro/diffusers"
-  ],
-  "mcpServerAllowlist": [
-    {
-      "name": "diffusers-docs",
-      "command": "diffusers-docs-mcp"
-    }
   ]
 }

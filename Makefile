@@ -12,8 +12,8 @@ help:
 	@echo "  make check      Run the convention gate on the whole repo (sets exit code)"
 	@echo "  make check-json Same, machine-readable (CI / dashboards)"
 	@echo "  make test       Run the contract tests (zero third-party installs needed)"
-	@echo "  make mcp        Self-test the diffusers-docs MCP server (Cursor handshake)"
-	@echo "  make demo       Catch the bad scheduler, pass the good one, MCP, tests"
+	@echo "  make mcp        Optional docs CLI: docs_mcp_server.py --query set_timesteps"
+	@echo "  make demo       Catch the bad scheduler, pass the good one, docs CLI, tests"
 	@echo "  make demo-contribute  First-contribution journey (KEEP=1 leaves files)"
 	@echo "  make demo-contribute-clean  Remove the EulerLite contribution files"
 	@echo "  make demo-maintain  Prove req #4: add a rule, rebuild, watch it propagate"
@@ -28,22 +28,25 @@ doctor:
 	@command -v $(PYTHON) >/dev/null || (echo "Need python3 on PATH"; exit 1)
 	@$(PYTHON) -c "import yaml" 2>/dev/null || (echo "Need PyYAML: pip install -r requirements.txt"; exit 1)
 	@test -f .cursor/hooks.json && test -f .cursor/mcp.json && test -f .cursor/commands/scaffold.md && test -f .cursorignore \
-		&& test -f .cursor/mcp-diffusers-docs.py && test -f .cursor/mcp-diffusers-docs.sh \
+		&& test ! -e .cursor/mcp-diffusers-docs.py && test ! -e .cursor/mcp-diffusers-docs.sh \
+		&& test ! -e .cursor/install-docs-mcp.sh && test ! -e overlay/mcp.optional.json \
 		&& test -f .cursor/commands/search-docs.md && test -f .cursor/skills/search-docs/SKILL.md \
-		|| (echo "Missing Cursor wiring (hooks, mcp launcher, scaffold, search-docs, .cursorignore)"; exit 1)
-	@! grep -q workspaceFolder .cursor/mcp.json || (echo "mcp.json must not use workspaceFolder vars (Cloud stdio does not expand them)"; exit 1)
-	@test -f tools/attach_library.py && test -f overlay/OVERLAY.md \
-		&& test -f overlay/mcp.json && test -f overlay/mcp.optional.json \
+		|| (echo "Missing Cursor wiring or leftover docs-MCP launchers still present"; exit 1)
+	@$(PYTHON) -c "import json, pathlib; c=json.loads(pathlib.Path('.cursor/mcp.json').read_text()); assert c.get('mcpServers')=={}, c" \
+		|| (echo ".cursor/mcp.json must be {\"mcpServers\":{}}"; exit 1)
+	@test -f tools/attach_library.py && test -f overlay/OVERLAY.md && test -f overlay/mcp.json \
 		|| (echo "Missing overlay attach tooling"; exit 1)
-	@$(PYTHON) -c "import json, pathlib; c=json.loads(pathlib.Path('overlay/mcp.json').read_text()); s=c['mcpServers']; assert 'diffusers-docs' in s and 'huggingface' not in s, c; assert s['diffusers-docs']['args']==['-u','.cursor/mcp-diffusers-docs.py'], s" \
-		|| (echo "overlay/mcp.json must be stdio diffusers-docs only (no Hub HTTP)"; exit 1)
-	@$(PYTHON) -c "import json, pathlib; s=json.loads(pathlib.Path('overlay/mcp.optional.json').read_text())['mcpServers']; assert 'diffusers-docs' in s and 'huggingface' in s, s" \
-		|| (echo "overlay/mcp.optional.json must list opt-in servers"; exit 1)
-	@$(PYTHON) tools/docs_mcp_server.py --selftest >/dev/null
+	@$(PYTHON) -c "import json, pathlib; c=json.loads(pathlib.Path('overlay/mcp.json').read_text()); assert c.get('mcpServers')=={}, c" \
+		|| (echo "overlay/mcp.json must be {\"mcpServers\":{}}"; exit 1)
+	@$(PYTHON) -c "import json, pathlib; e=json.loads(pathlib.Path('.cursor/environment.json').read_text()); assert 'mcpServerAllowlist' not in e and 'start' not in e, e" \
+		|| (echo "kit environment.json must not allowlist or start a docs MCP"; exit 1)
+	@$(PYTHON) -c "import json, pathlib; e=json.loads(pathlib.Path('overlay/environment.json').read_text()); assert 'mcpServerAllowlist' not in e and 'start' not in e, e" \
+		|| (echo "overlay environment.json must not allowlist or start a docs MCP"; exit 1)
+	@$(PYTHON) tools/docs_mcp_server.py --query "set_timesteps" >/dev/null
 	@test -f tools/grokbot_sim.py && test -f tools/verify_scheduler_contract.py \
 		&& test -f agents/grokbot-profiles.md && test -f .cursor/agents/grokbot-qa.md \
 		|| (echo "Missing GrokBot / contract-verify tooling"; exit 1)
-	@echo "doctor OK: $(PYTHON) + PyYAML + Cursor files + MCP self-test + overlay"
+	@echo "doctor OK: $(PYTHON) + PyYAML + empty mcpServers + docs CLI --query + overlay"
 
 attach:
 	$(PYTHON) tools/attach_library.py --target $(or $(TARGET),../diffusers)
@@ -77,18 +80,18 @@ test:
 	$(PYTHON) -m unittest discover -s tests -t . -v
 
 mcp:
-	$(PYTHON) tools/docs_mcp_server.py --selftest
+	$(PYTHON) tools/docs_mcp_server.py --query "set_timesteps"
 
 # The live-demo sequence: gate catches the from-memory scheduler (nonzero exit,
-# shown), then passes the scaffolded one, then the MCP grounds an answer, then
+# shown), then passes the scaffolded one, then the optional docs CLI, then
 # the contract tests are green.
 demo:
 	@echo "\n========== 1. A new engineer's first-cut scheduler =========="
 	-$(PYTHON) tools/convention_check.py examples/candidate_scheduler
 	@echo "\n========== 2. The scaffolded, convention-correct version =========="
 	$(PYTHON) tools/convention_check.py examples/scaffolded_scheduler
-	@echo "\n========== 3. Grounded doc-search via the MCP server =========="
-	$(PYTHON) tools/docs_mcp_server.py --selftest
+	@echo "\n========== 3. Optional docs CLI fallback (--query) =========="
+	$(PYTHON) tools/docs_mcp_server.py --query "set_timesteps"
 	@echo "\n========== 4. Contract tests (zero install) =========="
 	$(PYTHON) -m unittest discover -s tests -t . -v
 	@echo "\n========== 5. GrokBot QA simulation (read-side, does not gate) =========="

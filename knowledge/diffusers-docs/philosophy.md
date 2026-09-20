@@ -1,5 +1,5 @@
 <!--
-Seed corpus for the doc-search MCP (curated excerpts, not the full docs).
+Seed corpus for the optional docs CLI (curated excerpts, not the full docs).
 Point DIFFUSERS_DOCS_ROOT at a real diffusers checkout's docs/source/en for
 complete coverage. Source: https://huggingface.co/docs/diffusers/conceptual/philosophy
 -->

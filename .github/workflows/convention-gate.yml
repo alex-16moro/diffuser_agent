@@ -19,8 +19,8 @@ jobs:
         run: python tools/build_projections.py && git diff --exit-code
       - name: Scheduler contract re-verify
         run: python tools/verify_scheduler_contract.py
-      - name: MCP doc-server self-test
-        run: python tools/docs_mcp_server.py --selftest
+      - name: Docs CLI --query fallback
+        run: python tools/docs_mcp_server.py --query "set_timesteps"
       - name: Contract tests
         run: python -m unittest discover -s tests -t .
       - name: Machine-readable report

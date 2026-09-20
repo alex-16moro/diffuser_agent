@@ -7,18 +7,17 @@ before launching a Cloud Agent. **Primary live write:** Cloud Agent on
 
 **Runbook:** `docs/LIVE_DEMO.md`.
 
-Default overlay MCP is **stdio `diffusers-docs`**, not Hub HTTP. Cloud dropdown:
-`diffusers-docs-mcp` or `python3 -u .cursor/mcp-diffusers-docs.py`. The first
-PR still copies templates and runs the file-scoped gate; `search_docs` is
-available, not a deliverable. Extra servers live in `overlay/mcp.optional.json`.
+Default overlay MCP is **empty** (`{"mcpServers":{}}`). Grounding is root
+`AGENTS.md`, `.ai/`, and reference source. Optional:
+`python3 tools/docs_mcp_server.py --query "..."`. The first PR still copies
+templates and runs the file-scoped gate.
 
 ---
 
 ## Prompt A — first contribution ON THE FORK (paste this)
 
-Launch a **new** Cloud Agent on `alex-16moro/diffusers`, branch **`main`**. Enable
-stdio MCP (`diffusers-docs-mcp` or `python3 -u .cursor/mcp-diffusers-docs.py`).
-Do **not** enable Hub HTTP MCP. The draft PR **base must be `main`** so overlay
+Launch a **new** Cloud Agent on `alex-16moro/diffusers`, branch **`main`**. Do
+**not** enable a docs MCP dropdown. The draft PR **base must be `main`** so overlay
 CI (`ramp-kit-overlay` / `overlay-gate`) actually runs. Do not stack onto a
 `cursor/…` topic branch.
 
@@ -78,15 +77,11 @@ primary; `make demo-contribute KEEP=1` as fallback.
 
 ## Pre-flight (20 seconds, so nothing stalls live)
 
-- **Doctor:** `make doctor` — python3, PyYAML, Cursor files, MCP self-test,
-  overlay stdio `diffusers-docs` (no Hub HTTP).
-- **Kit Desktop MCP:** Cursor → Settings → **MCP** → enable `diffusers-docs`.
-  Config is `.cursor/mcp.json` (`python3 -u .cursor/mcp-diffusers-docs.py`).
-  It must **not** use `${workspaceFolder}`. Cloud dropdown: `diffusers-docs-mcp`.
-- **Fork / Cloud Agents:** overlay `.cursor/mcp.json` is stdio `diffusers-docs`
-  only. Project MCP is **not** auto-loaded on Cloud — paste
-  `diffusers-docs-mcp` (or `python3 -u .cursor/mcp-diffusers-docs.py`) in the
-  MCP dropdown. Do **not** add Hugging Face HTTP MCP (Hub search + OAuth).
+- **Doctor:** `make doctor` — python3, PyYAML, Cursor files, empty `mcpServers`,
+  docs CLI `--query`.
+- **Default MCP:** `.cursor/mcp.json` is `{"mcpServers":{}}` on the kit and the
+  fork overlay. Ground in `AGENTS.md` / `.ai/` / reference source. Optional:
+  `python3 tools/docs_mcp_server.py --query "set_timesteps"`.
 - **Confirm rules loaded:** the Agent sidebar should show `00-conventions`
   active; `10-scheduler` auto-attaches once a scheduler file is open.
 - **Torch is optional.** The gate and the structural/signature tests still pass
@@ -155,9 +150,10 @@ the tooling. Keep it minimal; do not implement a real model.
 
 - **Kit first, then fork:** catch-early on this repo; the write lands on the
   real library tree.
-- **Grounding:** the agent reads `ramp-kit/conventions/rules.yaml` and copies
-  the overlay templates. Euler/DDPM source is how *we* verified the YAML, not
-  the first-PR recipe. MCP is opt-in, not the demo.
+- **Grounding:** the agent reads `ramp-kit/conventions/rules.yaml`, root
+  `AGENTS.md` / `.ai/`, and copies the overlay templates. Euler/DDPM source is
+  how *we* verified the YAML, not the first-PR recipe. Optional docs CLI is
+  not the demo.
 - **Catch-early:** you run this on the **kit**, not inside Prompt A.
 - **Correct scaffold:** scheduler + matching test with no leftover placeholders;
   registered in inits/dummies; file-scoped gate 0 blocking; `TODO(engineer)`
