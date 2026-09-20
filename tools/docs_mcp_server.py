@@ -9,13 +9,14 @@ The same server serves scheduler, model, and pipeline questions — you scale it
 by pointing it at more docs, never by adding new machinery. It complements the
 convention gate: the gate stops WRONG code; doc-search improves DISCOVERY.
 
-TRANSPORT: MCP stdio — JSON-RPC 2.0 with Content-Length framing (the LSP-style
-stdio Cursor uses), plus an NDJSON fallback for ad-hoc CLI testing. Cursor
-Desktop launches it from .cursor/mcp.json via .cursor/mcp-diffusers-docs.py
-(no ${workspaceFolder} — Cloud stdio does not expand it and cannot set cwd).
-Implemented with the standard library only, so it runs on a fresh clone /
-GPU-less CI with zero installs (a hard PyPI-free constraint we actually hit
-while building this).
+TRANSPORT: MCP stdio — JSON-RPC 2.0 as newline-delimited JSON (what Cursor
+expects on stdio). The reader still accepts Content-Length (LSP-style) as
+well as NDJSON, so older clients keep working. Cursor Desktop launches it
+from .cursor/mcp.json via .cursor/mcp-diffusers-docs.py (workspace-relative
+arg; no ${workspaceFolder} — Cloud stdio does not expand it and cannot set
+cwd). Implemented with the standard library only, so it runs on a fresh
+clone / GPU-less CI with zero installs (a hard PyPI-free constraint we
+actually hit while building this).
 
 Methods implemented: initialize, notifications/initialized, ping, tools/list,
 tools/call (tool: search_docs).
@@ -183,13 +184,10 @@ def _handle(msg: dict):
     return None
 
 
-def _write_message(stdout, msg: dict) -> None:
-    """Write one JSON-RPC message with Content-Length framing (byte length)."""
-    body = json.dumps(msg, ensure_ascii=False).encode("utf-8")
-    header = f"Content-Length: {len(body)}\r\n\r\n".encode("ascii")
-    if hasattr(stdout, "buffer"):
-        stdout = stdout.buffer
-    stdout.write(header + body)
+def _write_message(msg, stdout=None):
+    """Write one JSON-RPC message as newline-delimited JSON (MCP stdio spec)."""
+    stdout = stdout if stdout is not None else sys.stdout
+    stdout.write(json.dumps(msg, separators=(",", ":")) + "\n")
     stdout.flush()
 
 
@@ -243,10 +241,10 @@ def _read_message(stdin):
 
 
 def serve(stdin=None, stdout=None):
-    """Run the MCP stdio loop (Content-Length framing, NDJSON fallback)."""
+    """Run the MCP stdio loop (NDJSON write; Content-Length or NDJSON read)."""
     stdin = stdin if stdin is not None else sys.stdin
     stdout = stdout if stdout is not None else sys.stdout
-    # Anything printed to stdout breaks Content-Length framing. Keep logs on stderr.
+    # Anything extra on stdout breaks NDJSON. Keep logs on stderr.
     if stdout is sys.stdout:
         sys.stdout.flush()
     while True:
@@ -258,7 +256,7 @@ def serve(stdin=None, stdout=None):
             break
         resp = _handle(msg)
         if resp is not None:
-            _write_message(stdout, resp)
+            _write_message(resp, stdout)
 
 
 def _frame(msg: dict) -> bytes:
@@ -266,38 +264,18 @@ def _frame(msg: dict) -> bytes:
     return f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body
 
 
-def _parse_framed(blob: bytes) -> list[dict]:
-    """Parse Content-Length framed responses from a bytes blob."""
-    out = []
-    i = 0
-    lower = blob.lower()
-    needle = b"content-length:"
-    while True:
-        idx = lower.find(needle, i)
-        if idx < 0:
-            break
-        header_end = blob.find(b"\r\n\r\n", idx)
-        sep_len = 4
-        if header_end < 0:
-            header_end = blob.find(b"\n\n", idx)
-            sep_len = 2
-        if header_end < 0:
-            break
-        header = blob[idx:header_end].decode("ascii", errors="replace")
-        try:
-            length = int(header.split(":", 1)[1].strip().split()[0])
-        except (ValueError, IndexError):
-            break
-        start = header_end + sep_len
-        body = blob[start:start + length]
-        out.append(json.loads(body.decode("utf-8")))
-        i = start + length
-    return out
+def _parse_ndjson(blob) -> list[dict]:
+    """Parse newline-delimited JSON-RPC responses."""
+    if isinstance(blob, bytes):
+        text = blob.decode("utf-8")
+    else:
+        text = blob
+    return [json.loads(ln) for ln in text.splitlines() if ln.strip()]
 
 
 # --------------------------------------------------------------------------- #
 def _selftest() -> int:
-    """Simulate the Cursor handshake end-to-end with Content-Length framing."""
+    """Simulate the Cursor handshake end-to-end; parse NDJSON responses."""
     import io
     reqs = [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize",
@@ -312,10 +290,13 @@ def _selftest() -> int:
          "params": {"name": "search_docs",
                     "arguments": json.dumps({"query": "SchedulerMixin", "k": 1})}},
     ]
+    # Reader still accepts Content-Length; writer emits NDJSON.
     stdin = io.BytesIO(b"".join(_frame(r) for r in reqs))
-    stdout = io.BytesIO()
+    stdout = io.StringIO()
     serve(stdin, stdout)
-    messages = _parse_framed(stdout.getvalue())
+    raw = stdout.getvalue()
+    assert "Content-Length" not in raw, raw
+    messages = _parse_ndjson(raw)
     assert messages[0]["result"]["serverInfo"]["name"] == "diffusers-docs", "initialize failed"
     assert messages[0]["result"]["protocolVersion"] == "2025-03-26", "protocol negotiate failed"
     assert messages[1]["result"]["tools"][0]["name"] == "search_docs", "tools/list failed"
@@ -323,7 +304,7 @@ def _selftest() -> int:
     assert messages[3]["result"]["prompts"] == [], "prompts/list should be empty, not an error"
     assert "content" in messages[4]["result"], "tools/call failed"
     assert "content" in messages[5]["result"], "tools/call JSON-string arguments failed"
-    print("MCP self-test OK: initialize -> list -> search_docs (Content-Length).")
+    print("MCP self-test OK: initialize -> list -> search_docs (NDJSON).")
     print("  tools/call returned:\n   ",
           messages[4]["result"]["content"][0]["text"].replace("\n", "\n    ")[:400])
     return 0

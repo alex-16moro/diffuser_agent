@@ -115,7 +115,7 @@ make demo              # catch the bad scheduler, pass the good one, MCP, tests
 make demo-contribute   # first-contribution journey (KEEP=1 leaves the new files)
 make check      # run the gate on the whole repo (exit code = # blocking)
 make test       # contract tests — zero third-party installs needed
-make mcp        # self-test the diffusers-docs MCP server (Content-Length handshake)
+make mcp        # self-test the diffusers-docs MCP server (NDJSON handshake)
 make demo-maintain     # add a rule, rebuild, watch it propagate to every surface (req #4)
 make grokbot ROLE=qa   # role briefing from sample gate JSON (does not gate)
 make grokbot-pack      # paste-ready Grok Bot iPhone/desktop profiles
@@ -128,7 +128,7 @@ The 90-second demo (`make demo`) shows the whole arc:
 2. The scaffolded, convention-correct version (`examples/scaffolded_scheduler/`) —
    **0 findings**.
 3. The `diffusers-docs` MCP server answers a grounded query over the library's
-   docs (Content-Length JSON-RPC, the stdio framing Cursor uses).
+   docs (newline-delimited JSON-RPC, the stdio framing Cursor uses).
 4. Contract tests — green, with numeric determinism skipped cleanly when torch
    isn't installed.
 
@@ -190,7 +190,7 @@ Each upstream rule cites what it was checked against in its `source:` field.
 conventions/rules.yaml          the single source of truth (component-tagged)
 tools/convention_check.py       the runnable gate (AST + regex)
 tools/build_projections.py      renders every audience surface (per-component .mdc)
-tools/docs_mcp_server.py        the diffusers-docs MCP server (Content-Length JSON-RPC)
+tools/docs_mcp_server.py        the diffusers-docs MCP server (NDJSON JSON-RPC)
 tools/demo_contribute.py        CLI twin of the live `/scaffold` contribution
 knowledge/diffusers-docs/       seed doc corpus for the MCP (override with a real checkout)
 templates/                      scaffold templates + "add a component" guide
