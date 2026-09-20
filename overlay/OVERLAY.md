@@ -36,10 +36,14 @@ Hub HTTP and extra servers stay in `.cursor/mcp.optional.json`.
    `make demo-maintain` if you show maintainability.
 2. Then launch on **this fork** (`alex-16moro/diffusers`), branch `main`.
 3. Scaffold writes `src/diffusers/schedulers/scheduling_<name>.py` here
-   (HeunLite if EulerLite already exists). Gate:
+   (a new unused name if EulerLite/HeunLite already exist). Gate:
    `python3 ramp-kit/tools/convention_check.py <that file>` (never `--all`).
+   Register the class in `schedulers/__init__.py`, `diffusers/__init__.py`, and
+   dummy objects. Invoke `make style`, `make quality`, and
+   `python utils/check_copies.py && python utils/check_dummies.py && python utils/check_repo.py`
+   until they exit 0.
 4. Open the PR **on this fork**, not on huggingface/diffusers, **draft, base
-   `main`**, those two files only.
+   `main`**, only after those library gates pass.
 
 Catch-early fixture: `ramp-kit/examples/candidate_scheduler` — do not copy it.
 

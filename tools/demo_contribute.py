@@ -64,12 +64,34 @@ def ground() -> None:
     )
 
 
+# Tokens that must not survive a scaffolded copy. TODO(engineer) stays.
+_LEFTOVER_PLACEHOLDERS = (
+    "TEMPLATE —",
+    "TEMPLATE -",
+    "CHANGE_ME",
+    "ChangeMeScheduler",
+    "TemplateScheduler",
+)
+
+
+def _assert_no_placeholders(path: Path) -> None:
+    text = path.read_text()
+    leftover = [tok for tok in _LEFTOVER_PLACEHOLDERS if tok in text]
+    if leftover:
+        raise SystemExit(
+            f"scaffold left placeholder(s) {leftover} in {path.relative_to(ROOT)}"
+        )
+    if "TODO(engineer)" not in text and path.name.startswith("scheduling_"):
+        raise SystemExit(f"scaffold dropped TODO(engineer) in {path.relative_to(ROOT)}")
+
+
 def scaffold(cls: str, impl: Path, test: Path) -> None:
     tmpl = (ROOT / "templates" / "scheduler" / "scheduling_TEMPLATE.py").read_text()
     if "TemplateScheduler" not in tmpl:
         raise SystemExit("scheduler template missing TemplateScheduler")
     impl.parent.mkdir(parents=True, exist_ok=True)
     impl.write_text(tmpl.replace("TemplateScheduler", cls))
+    _assert_no_placeholders(impl)
     print(f"wrote {impl.relative_to(ROOT)}")
     print(f"  class {cls} — numerical update left as TODO(engineer)")
 
@@ -79,8 +101,9 @@ def scaffold(cls: str, impl: Path, test: Path) -> None:
     ttmpl = ttmpl.replace("ChangeMeScheduler", cls)
     test.parent.mkdir(parents=True, exist_ok=True)
     test.write_text(ttmpl)
+    _assert_no_placeholders(test)
     print(f"wrote {test.relative_to(ROOT)}")
-    print("  TARGET + CLASS set; signature tests keep set_timesteps / step (TEST001)")
+    print("  TARGET + CLASS set; every template token replaced (TEST001)")
 
 
 def remove(impl: Path, test: Path) -> None:
