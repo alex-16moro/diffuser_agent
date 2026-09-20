@@ -297,16 +297,26 @@ class TestGrokbotIphonePack(unittest.TestCase):
             "never gate",
             "never merge",
             "Edit Profile",
-            "First iPhone message",
+            "git pull",
+            "pull_request",
+            "not merge",
+            "agents/grokbot-qa.md",
         ):
             self.assertIn(needle, text)
+        qa = (ROOT / "agents" / "grokbot-qa.md").read_text()
+        pm = (ROOT / "agents" / "grokbot-pm.md").read_text()
+        devops = (ROOT / "agents" / "grokbot-devops.md").read_text()
+        self.assertIn("Residual risk", qa)
+        self.assertIn("Timeline", pm)
+        self.assertIn("CI/CD", devops)
+        self.assertIn("opened", qa.lower())
         for role in ("qa", "pm", "devops"):
             agent = ROOT / ".cursor" / "agents" / f"grokbot-{role}.md"
             self.assertTrue(agent.is_file(), agent)
             body = agent.read_text()
             self.assertIn("readonly: true", body)
             self.assertIn("never merge", body.lower())
-            self.assertIn(f"grokbot_sim.py --role {role}", body)
+            self.assertIn(f"agents/grokbot-{role}.md", body)
 
     def test_grokbot_pack_prints_profiles(self):
         proc = subprocess.run(
@@ -318,7 +328,7 @@ class TestGrokbotIphonePack(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("Ramp Kit QA", proc.stdout)
-        self.assertIn("make grokbot-pack", proc.stdout)
+        self.assertIn("git pull", proc.stdout)
 
 
 class TestSchedulerContractVerify(unittest.TestCase):

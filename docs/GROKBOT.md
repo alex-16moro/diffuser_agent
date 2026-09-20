@@ -1,80 +1,60 @@
-# Wire Ramp Kit GrokBots to the iPhone Grok Bot app
+# Grok Bots — repo spec wins
 
-Cursor **Grok Bot** (iOS App Store id `6794501026`, also desktop) is a
-messaging client over a persistent cloud computer. It does **not** import
-`agents/*.md` from git. The kit therefore emits paste-ready profiles from the
-same registry that feeds the gate.
+Grok Bot does **not** import git. Paste a **short stub** into Edit Profile
+once. On every job the Bot `git pull`s this kit and reads
+`agents/grokbot-<role>.md`. That file is the real instructions.
 
-| Surface | What it is | Gates? |
-|---------|------------|--------|
-| `agents/grokbot-profiles.md` | Name / Title / Description / first message to paste into the app | No |
-| `agents/grokbot-{pm,qa,devops}.md` | Full owner-tagged spec the Bot reads after clone | No |
-| `.cursor/agents/grokbot-*.md` | Cursor subagents if Grok Bot spawns a Cloud Agent on this repo | No |
-| `tools/grokbot_sim.py` / `make grokbot ROLE=qa` | Reproducible CLI briefing from `convention_check --json` | No |
+| Layer | Where | Changes when |
+|-------|--------|----------------|
+| Stub | Edit Profile (Name / Title / Description) | Almost never. Re-paste only if standing orders change. |
+| Spec | `agents/grokbot-{qa,pm,devops}.md` | Every `make build` / git pull. Briefing shape lives here. |
+| Trigger | Desktop routine: GitHub `pull_request` | Created once. iPhone can run it, not edit it. |
 
-The gate remains `tools/convention_check.py`. These Bots translate. They never
-fail CI and never merge.
+Trigger: **PR opened** (including draft), **synchronize**, **ready_for_review**.
+Not merge. First-contribution briefings are decision aids while the PR is
+still reviewable.
 
-Print the paste pack:
+They never gate, never fail CI, never merge.
 
 ```bash
-make grokbot-pack
+make grokbot-pack    # print stubs + first messages + routine text
 ```
 
 ---
 
-## On the iPhone (about 3 minutes)
+## Already-created Bots (do this once)
 
-Use **Grok Bot**, not the Cursor for iOS app. Sign in with the **same Cursor
-account** that has a paid plan (Pro / Pro+ / Ultra / Teams). Privacy Mode
-(Legacy) blocks Grok Bot until you switch to Privacy Mode.
+Name/Title stay **Ramp Kit QA / PM / DevOps**. Send each Bot the
+**First message** from `agents/grokbot-profiles.md` (or paste the new
+short Description over the old long one).
 
-1. Open Grok Bot → **New** → **Create your own** (or Create new Bot).
-2. **Bot actions → Edit Profile**. Paste **Name**, **Title**, and **Description**
-   from the matching block in `agents/grokbot-profiles.md`.
-3. Send the **First iPhone message** from that block as the opening chat.
-   Approve clone into `/workspace/diffuser_agent` if the Bot asks.
-4. Repeat for the three Bots, in this order (QA is the live-demo role):
+Then on desktop, one routine per Bot: GitHub pull_request opened. Paste
+the **Routine** block from the same file.
 
-   | Name | Title | Spec |
-   |------|-------|------|
-   | Ramp Kit QA | Risk briefing | `agents/grokbot-qa.md` |
-   | Ramp Kit PM | Status digest | `agents/grokbot-pm.md` |
-   | Ramp Kit DevOps | Health signal | `agents/grokbot-devops.md` |
-
-5. Optional: swipe a Bot → **Move to** → **New Section** named `Ramp Kit`
-   (Grok Bot iOS 1.2.0+). Sections sync with desktop.
-6. Optional: start a **group chat** with the three and `@` the role you want.
-
-To brief a change from the phone after the Bot has the repo:
-
-> Run `python3 tools/convention_check.py --json examples/candidate_scheduler || true`
-> then `python3 tools/grokbot_sim.py --role qa` and paste the briefing.
-
-Or paste gate JSON into the chat and ask for the role-shaped output.
+After that, instruction edits propagate with `git pull`. You do not
+re-paste the briefing body.
 
 ---
 
-## Desktop-only (not on iPhone)
+## What each spec asks for
 
-- **Share → Create template** produces an x.ai preview link. Recipients tap
-  **Add to Grok Bot**. Copies identity, description, skills, routines — not
-  your computer, logins, or chat history. Strip secrets first.
-- **Routines** (schedule / webhook) that POST gate JSON. Save the routine,
-  then copy **POST to** + `Authorization: Bearer`. HTTP 200 means a run
-  started, not that the briefing finished.
-- Teach-by-demonstration, routine edit/history, computer update/reset.
+| Bot | Spec | On a first-contribution PR, write |
+|-----|------|-----------------------------------|
+| Ramp Kit QA | `agents/grokbot-qa.md` | Testing impact, coverage vs residual risk (math, duplication). Overlay-green ≠ tested. |
+| Ramp Kit PM | `agents/grokbot-pm.md` | Timeline, dependencies, project risks. Scaffold ≠ product-done. |
+| Ramp Kit DevOps | `agents/grokbot-devops.md` | CI/CD impact. Overlay clearance ≠ Hugging Face CI. Never `--all`. |
 
-Plugins (GitHub, etc.) are **account-wide**: a login for QA is visible to PM
-and DevOps on the same Grok Bot computer.
+Kit repo (specs): `https://github.com/alex-16moro/diffuser_agent`  
+Typical PR to brief: `https://github.com/alex-16moro/diffusers` (fork).
 
 ---
 
-## After a registry edit
+## After a spec edit
 
 ```bash
-make build          # regenerates specs + iPhone profiles + Cursor subagents
-make grokbot-pack   # re-copy Description into Edit Profile if owner-tagged rules changed
+make build
+git push
 ```
 
-Do not hand-edit generated files. Humans edit `conventions/rules.yaml`.
+The Bot pulls on the next PR event. If a routine is already running against
+a stale clone, tell it `git -C /workspace/diffuser_agent pull` once.

@@ -47,32 +47,125 @@ BANNER = "<!-- GENERATED from conventions/rules.yaml by tools/build_projections.
 BANNER_HASH = "# GENERATED from conventions/rules.yaml by tools/build_projections.py. DO NOT EDIT. Run `make build`."
 ALLOWED_OWNERS = ("dev", "architect", "qa", "pm", "devops")
 KIT_REPO = "https://github.com/alex-16moro/diffuser_agent"
+KIT_DIR = "/workspace/diffuser_agent"
 # Paste order for the iPhone pack: QA is the live-demo role.
 GROKBOT_PACK_ORDER = ("qa", "pm", "devops")
+GROKBOT_TRIGGER = (
+    "Primary: GitHub `pull_request` **opened** (including draft), **synchronize** "
+    "(new commits), and **ready_for_review**. Not merge. A first-contribution "
+    "briefing is a decision aid while the PR is still reviewable."
+)
 GROKBOT_ROLES = {
     "pm": {
         "bot_name": "Ramp Kit PM",
         "bot_title": "Status digest",
         "title": "PM status digest",
-        "job": "Turn the gate/CI output for this change into a ship/no-ship status digest a PM can read in one minute.",
-        "reads": "convention_check --json, CI conclusion, the issue/PR change record, owner=pm rows in the registry.",
-        "output": "status digest: blocking count, DoD items still open, whether the change is merge-eligible.",
+        "job": (
+            "When a first-contribution PR is opened or updated, tell PM the "
+            "impact on timelines, project risks, and dependencies — in one minute."
+        ),
+        "reads": (
+            "The PR (title, files, TODOs), file-scoped convention_check JSON, "
+            "CI conclusion, owner=pm rows, projections/pm/definition-of-done.md."
+        ),
+        "output": (
+            "status digest: what this increment actually is, timeline impact, "
+            "dependencies, project risks, mechanical vs product DoD."
+        ),
+        "briefing": """\
+Write a PM digest a non-engineer can use. Do not dump rule ids without translation.
+
+### Impact
+What landed in *this* PR (contract scaffold vs shippable feature). Say plainly
+if `TODO(engineer)` means the math is still a follow-up.
+
+### Timeline
+Can review start now? What work is *not* in this increment? Do not call a
+scaffold "scheduler done."
+
+### Dependencies
+Torch for behavioral tests; overlay gate ≠ Hugging Face CI (upstream Actions
+may be red and that is expected); kit clone at `ramp-kit/` on the fork.
+
+### Project risks
+Scope creep (treating overlay-green as released). Open DoD boxes. Anything
+that would slip the first-contribution path.
+
+### Call
+Mechanical merge-eligible: YES/NO. Product-done: almost always NO on a
+scaffold. Next human action in one line.""",
     },
     "qa": {
         "bot_name": "Ramp Kit QA",
         "bot_title": "Risk briefing",
         "title": "QA risk briefing",
-        "job": "Turn the gate/CI output for this change into a risk briefing: what is machine-blocked, what tests are weak, what still needs a human.",
-        "reads": "convention_check --json, CI conclusion, the change record, owner=qa rows in the registry.",
-        "output": "risk briefing: QA-owned blocking findings first, other blocks, residual human-only risk (math, duplication).",
+        "job": (
+            "When a first-contribution PR is opened or updated, tell QA — from a "
+            "testing point of view — impact, coverage, and residual risk."
+        ),
+        "reads": (
+            "The PR diff (scheduler + test), file-scoped convention_check JSON, "
+            "CI conclusion, owner=qa rows, projections/qa/review-checklist.md."
+        ),
+        "output": (
+            "QA risk briefing: testing impact, what the gate covered, residual "
+            "human risk (math, duplication, missing integration)."
+        ),
+        "briefing": """\
+Write a QA & testing summary. Lead with residual risk, not a finding dump.
+
+### Impact
+What is under test (new scheduler? contract test only?). Note skipped
+behavioral tests when torch is absent.
+
+### Covered
+Gate/TEST001/TEST002: presence, assertions, same-seed determinism,
+shape/dtype. Structural mixins and signatures.
+
+### Residual risk
+Numerical method vs the paper. Pipeline integration. Duplication of an
+existing scheduler (e.g. EulerDiscrete). Overlay-green is not "tested."
+
+### Ask of QA
+What a human must still judge before this can be called quality-complete.
+Do not treat overlay clearance as a pass on the sampler.""",
     },
     "devops": {
         "bot_name": "Ramp Kit DevOps",
         "bot_title": "Health signal",
         "title": "DevOps health signal",
-        "job": "Turn the gate/CI output for this change into a health/signal: will CI stay green, did generated surfaces drift, is the overlay still attachable.",
-        "reads": "convention_check --json, CI conclusion (including projection-drift and contract re-verify), owner=devops rows in the registry.",
-        "output": "health/signal: exit code, drift, contract re-verify, device/CI blockers.",
+        "job": (
+            "When a first-contribution PR is opened or updated, tell DevOps the "
+            "CI/CD impact: overlay gate, inherited Actions, drift, attachability."
+        ),
+        "reads": (
+            "The PR files, file-scoped convention_check JSON, GitHub Actions on "
+            "the PR, projection drift, verify_scheduler_contract, overlay/mcp.json, "
+            "owner=devops rows."
+        ),
+        "output": (
+            "CI/CD impact summary: overlay exit, HF CI vs overlay clearance, "
+            "drift/contract, device/MCP, signal RED/GREEN mechanical."
+        ),
+        "briefing": """\
+Write a CI/CD impact note. Cheap pipeline first. Do not "fix" red HF jobs
+by deleting inherited workflows.
+
+### Impact
+How many files, whether the overlay job stays GPU-less, whether the gate
+was file-scoped (required) or `--all` on the library (forbidden).
+
+### Overlay vs upstream CI
+Overlay 0 findings = customer clearance. Inherited Hugging Face Actions
+may be red on a fork demo — expected, not a reason to disable them.
+
+### Health checks
+DEVICE001 / LOG001 / CUST001. Projection drift. Scheduler contract
+re-verify (OK / SKIP / DRIFT). Default overlay MCP must stay empty.
+
+### Signal
+RED if overlay blocking > 0. GREEN mechanical ≠ upstream-green. One line
+on whether the fork is still attachable.""",
     },
 }
 
@@ -369,8 +462,8 @@ def build_devops():
         "- **Scheduler contract re-verify:** `python tools/verify_scheduler_contract.py`",
         "  fails if fork reference source drifted from SCHED001–003.",
         "- Rules carry an `owner` tag (`dev` / `architect` / `qa` / `pm` / `devops`).",
-        "  GrokBot role-agents translate gate JSON for that owner; they never gate.",
-        "  iPhone/desktop: paste `agents/grokbot-profiles.md` into the Grok Bot app.",
+        "  GrokBot role-agents brief a first-contribution PR for that owner; they never gate.",
+        "  Specs: `agents/grokbot-*.md` (repo wins). Trigger: PR opened, not merge.",
         "",
         "## Owner-tagged rules (devops)",
     ]
@@ -444,64 +537,87 @@ def _owned_ids(role: str) -> str:
 
 
 def _grokbot_profile_description(role: str, spec: dict) -> str:
+    """Short Edit Profile stub. The long spec lives in agents/grokbot-<role>.md."""
     return (
-        f"You are {spec['bot_name']} for the huggingface/diffusers Ramp Kit "
-        f"({KIT_REPO}).\n\n"
+        f"You are {spec['bot_name']}.\n\n"
         "Standing orders — do not violate:\n"
-        "- You TRANSLATE convention_check / CI output. You never gate, never "
-        "fail a job, never merge, never post to Slack/Jira/GitHub.\n"
-        f"- After clone, the authoritative spec is agents/grokbot-{role}.md "
-        f"(generated from conventions/rules.yaml where owner: {role}).\n"
-        "- To brief a change: python3 tools/convention_check.py --json <path> "
-        f"|| true, then python3 tools/grokbot_sim.py --role {role}.\n"
-        f"- Output shape: {spec['output']}\n\n"
-        f"Job: {spec['job']}\n"
-        f"Reads: {spec['reads']}\n"
-        f"Owner-tagged rules you speak for: {_owned_ids(role)}\n\n"
-        "If the user is on iPhone, keep replies short. Ask for a path or "
-        "pasted gate JSON. If /workspace/diffuser_agent is missing, clone "
-        "the repo there first."
+        "- Read-side only. Never gate, never fail CI, never merge, never approve a PR.\n"
+        f"- Every job: if {KIT_DIR} is missing, clone {KIT_REPO} there; then "
+        f"`git -C {KIT_DIR} pull`.\n"
+        f"- Read `{KIT_DIR}/agents/grokbot-{role}.md` and follow THAT file. "
+        "It wins over this description and over memory of older instructions.\n"
+        "- Trigger: GitHub pull_request opened (including draft), synchronize, "
+        "or ready_for_review. Do not brief on merge.\n"
+        f"- Job: {spec['job']}\n"
+        "- Keep iPhone replies short. One briefing per PR event."
     )
 
 
 def _grokbot_first_message(role: str, spec: dict) -> str:
     return (
-        f"You are {spec['bot_name']}. Standing orders: read-side only — "
-        "never gate, never merge.\n\n"
-        f"1. If /workspace/diffuser_agent is missing, clone {KIT_REPO} "
-        "into /workspace/diffuser_agent.\n"
-        f"2. Read agents/grokbot-{role}.md.\n"
-        f"3. Confirm role={role}, owned rule ids, and that you only "
-        "translate gate JSON.\n"
-        "4. Wait for a file path or pasted convention_check --json."
+        f"You are {spec['bot_name']}. From now on the repo spec wins.\n\n"
+        f"1. Clone {KIT_REPO} into {KIT_DIR} if missing, then "
+        f"`git -C {KIT_DIR} pull`.\n"
+        f"2. Read {KIT_DIR}/agents/grokbot-{role}.md. Ignore older instructions.\n"
+        "3. Confirm: role, PR-opened trigger (not merge), never gate/merge.\n"
+        "4. Wait for a PR URL (kit or alex-16moro/diffusers). On opened/"
+        "synchronize/ready_for_review, pull again, re-read the spec, brief."
+    )
+
+
+def _grokbot_routine(role: str, spec: dict) -> str:
+    return (
+        f"Trigger: GitHub pull_request opened / synchronize / ready_for_review "
+        f"(not merged). You are {spec['bot_name']}.\n\n"
+        f"1. git -C {KIT_DIR} pull || git clone {KIT_REPO} {KIT_DIR}\n"
+        f"2. Read {KIT_DIR}/agents/grokbot-{role}.md — that file wins.\n"
+        "3. Open the PR. File-scoped convention_check on changed scheduler/"
+        f"test files only (never --all). Kit tools live in {KIT_DIR}/tools "
+        "or ramp-kit/tools on the fork.\n"
+        "4. Write the role briefing from the spec (impact / risks / CI). "
+        "Optional: one PR comment with that briefing. Do not approve, "
+        "request-changes-as-gate, merge, or fail a job.\n"
+        "5. If the PR is a merge event, do nothing."
     )
 
 
 def build_grokbot_specs():
-    """READ-side role agents. Prompt body is the owner-tagged rules; they never gate."""
+    """READ-side role agents. Repo spec wins; Edit Profile is a short stub."""
     for role, spec in GROKBOT_ROLES.items():
         owned = _by_owner(role)
         lines = [
             BANNER, "",
             f"# GrokBot {role.upper()} — {spec['title']}",
             "",
-            "> **Read-side view.** This agent TRANSLATES gate and CI output.",
-            "> It never decides, never fails a job, never merges.",
-            "> iPhone / desktop Grok Bot: paste the matching block in",
-            "> `agents/grokbot-profiles.md` (see `docs/GROKBOT.md`).",
-            "> The reproducible briefing remains `tools/grokbot_sim.py`.",
+            "> **This file is the Bot's instructions.** Grok Bot does not import",
+            "> git. Edit Profile is a stub that says: `git pull`, then read this",
+            "> file. This file wins over memory and over the profile text.",
+            "> Read-side only: never gate, never fail CI, never merge.",
+            "",
+            "## Trigger",
+            GROKBOT_TRIGGER,
             "",
             "## Job",
             spec["job"],
             "",
+            "## Every run (do this first)",
+            "",
+            "```bash",
+            f"test -d {KIT_DIR}/.git || git clone {KIT_REPO} {KIT_DIR}",
+            f"git -C {KIT_DIR} pull --ff-only",
+            f"# then re-read {KIT_DIR}/agents/grokbot-{role}.md",
+            "```",
+            "",
             "## Reads (inputs)",
             spec["reads"],
             "",
-            "## Output shape",
-            spec["output"],
+            "## Briefing to write",
+            spec["briefing"].rstrip(),
             "",
-            "## Prompt (generated from `conventions/rules.yaml` where `owner:` is "
-            f"`{role}`)",
+            f"Owner-tagged registry rows (`owner: {role}`): `{_owned_ids(role)}`.",
+            "Use them as checklist context, not as the whole briefing.",
+            "",
+            "## Owner-tagged rules (appendix)",
             "",
         ]
         if not owned:
@@ -515,19 +631,20 @@ def build_grokbot_specs():
             lines.append(f"- Done: {r['dod']}")
             lines.append("")
         lines.extend([
-            "## How to run the briefing (CLI, reproducible)",
+            "## Gate helper (findings only — not the briefing)",
+            "",
+            "File-scope on the PR's new scheduler/test. Never `--all` on the",
+            "library tree. On the fork, tools are `ramp-kit/tools/`.",
             "",
             "```bash",
-            f"python tools/convention_check.py --json examples/candidate_scheduler "
-            f"> /tmp/gate.json || true",
-            f"python tools/grokbot_sim.py --role {role} < /tmp/gate.json",
+            "python3 tools/convention_check.py --json <changed.py> > /tmp/gate.json || true",
             "```",
             "",
-            "## Grok Bot app (iPhone / desktop)",
+            "## Routine (paste into Grok Bot desktop — not iPhone)",
             "",
-            f"Create a Bot named **{spec['bot_name']}**, title **{spec['bot_title']}**.",
-            "Paste the Description + first message from `agents/grokbot-profiles.md`.",
-            "The app does not import this file from git — paste is the wiring.",
+            "```",
+            _grokbot_routine(role, spec),
+            "```",
             "",
         ])
         write(ROOT / "agents" / f"grokbot-{role}.md", "\n".join(lines))
@@ -536,20 +653,19 @@ def build_grokbot_specs():
 
 
 def build_grokbot_profiles():
-    """Paste-ready Name / Title / Description / first message for the Grok Bot app."""
+    """Paste-ready Name / Title / stub Description. Long spec is agents/grokbot-*.md."""
     lines = [
         BANNER, "",
         "# Grok Bot profiles (iPhone + desktop)",
         "",
-        "Cursor **Grok Bot** (App Store id `6794501026`, also desktop) does",
-        "**not** import these files from git. Create three Bots in the app,",
-        "signed in with the same Cursor account, then paste each block into",
-        "**Bot actions → Edit Profile** (Name, Title, Description). Send the",
-        "first message as the opening chat. Steps: `docs/GROKBOT.md`.",
+        "Grok Bot does **not** import git. Paste this **short stub** into",
+        "**Edit Profile** once. The Bot `git pull`s the kit and reads",
+        "`agents/grokbot-<role>.md` on every PR. Re-paste the stub only if",
+        "Name/Title/standing orders change. Full briefing text: those spec",
+        "files. Steps: `docs/GROKBOT.md`.",
         "",
-        "Standing order for every Bot: **translate gate JSON; never gate;",
-        "never merge.** The reproducible briefing remains",
-        "`make grokbot ROLE=qa` / `tools/grokbot_sim.py`.",
+        "Trigger: **PR opened / synchronize / ready_for_review**, not merge.",
+        "Never gate. Never merge.",
         "",
         f"Kit: `{KIT_REPO}`",
         "",
@@ -565,24 +681,31 @@ def build_grokbot_profiles():
             "",
             f"**Title:** `{spec['bot_title']}`",
             "",
-            "**Description** (paste into Edit Profile):",
+            "**Description** (Edit Profile stub only — keep it short):",
             "",
             "```",
             _grokbot_profile_description(role, spec),
             "```",
             "",
-            "**First iPhone message** (send after creating the Bot):",
+            "**First message** (one-time, existing Bots too):",
             "",
             "```",
             _grokbot_first_message(role, spec),
+            "```",
+            "",
+            "**Routine** (desktop: New routine → GitHub pull_request opened):",
+            "",
+            "```",
+            _grokbot_routine(role, spec),
             "```",
             "",
         ])
     lines.extend([
         "---",
         "",
-        "Print this file with `make grokbot-pack`. After a registry edit,",
-        "`make build` regenerates these profiles from `owner:` tags.",
+        "Print with `make grokbot-pack`. After a spec change, `make build`",
+        "then `git pull` on the Bot computer — do not re-paste the whole stub",
+        "unless the standing orders changed.",
         "",
     ])
     write(ROOT / "agents" / "grokbot-profiles.md", "\n".join(lines))
@@ -593,9 +716,8 @@ def build_cursor_grokbot_agents():
     agents_dir = ROOT / ".cursor" / "agents"
     for role, spec in GROKBOT_ROLES.items():
         desc = (
-            f"{spec['bot_name']}. Translate convention_check JSON into a "
-            f"{spec['bot_title'].lower()}. Use when asked for a {role} view of "
-            "gate or CI output. Read-only; never merge."
+            f"{spec['bot_name']}. On PR opened/updated, write a {role} briefing "
+            f"from agents/grokbot-{role}.md. Read-only; never merge."
         )
         body = "\n".join([
             "---",
@@ -609,16 +731,12 @@ def build_cursor_grokbot_agents():
             "",
             f"You are {spec['bot_name']} ({spec['title']}).",
             "",
-            "Standing orders: TRANSLATE gate/CI output. Never gate, never fail",
-            "a job, never merge. Authoritative spec: `agents/grokbot-"
-            f"{role}.md`. Reproducible briefing:",
+            f"Authoritative spec: `agents/grokbot-{role}.md` (re-read it).",
+            "Trigger: pull_request opened / synchronize / ready_for_review — not merge.",
+            "Never gate, never fail a job, never merge.",
             "",
-            "```bash",
-            f"python tools/convention_check.py --json <path> > /tmp/gate.json || true",
-            f"python tools/grokbot_sim.py --role {role} /tmp/gate.json",
-            "```",
-            "",
-            f"Output shape: {spec['output']}",
+            f"Job: {spec['job']}",
+            f"Output: {spec['output']}",
             f"Owner-tagged rules: {_owned_ids(role)}",
             "",
         ])

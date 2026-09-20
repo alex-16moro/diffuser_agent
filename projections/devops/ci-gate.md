@@ -24,8 +24,8 @@ python tools/convention_check.py --all   # human-readable, sets exit code
 - **Scheduler contract re-verify:** `python tools/verify_scheduler_contract.py`
   fails if fork reference source drifted from SCHED001–003.
 - Rules carry an `owner` tag (`dev` / `architect` / `qa` / `pm` / `devops`).
-  GrokBot role-agents translate gate JSON for that owner; they never gate.
-  iPhone/desktop: paste `agents/grokbot-profiles.md` into the Grok Bot app.
+  GrokBot role-agents brief a first-contribution PR for that owner; they never gate.
+  Specs: `agents/grokbot-*.md` (repo wins). Trigger: PR opened, not merge.
 
 ## Owner-tagged rules (devops)
 - `DEVICE001` No hardcoded CUDA/device placement (block)
