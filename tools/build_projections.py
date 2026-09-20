@@ -60,6 +60,14 @@ GROKBOT_TRIGGER_DEVOPS_MERGE = (
     "short 'landed on main, overlay/CI still healthy?' note. QA and PM do not "
     "brief on merge. Merge is never a ship/no-ship or QA risk event."
 )
+GROKBOT_GROUNDING = (
+    "Every briefing claim cites its source signal: `[gate]` (findings / "
+    "blocking count / mechanical merge-eligibility), `[ci]` (convention_gate "
+    "/ inherited_workflows), `[issue]` (PR number, title, issue, milestone, "
+    "labels, draft, declared `state`), or `[drift]` (drift_check). Do not "
+    "assert a value with no signal. Never invent dates, velocity, or "
+    "deploy-env facts. This bot never gates, never merges, never fails CI."
+)
 GROKBOT_ROLES = {
     "pm": {
         "bot_name": "Ramp Kit PM",
@@ -67,38 +75,48 @@ GROKBOT_ROLES = {
         "title": "PM status digest",
         "job": (
             "When a first-contribution PR is opened or updated, tell PM the "
-            "impact on timelines, project risks, and dependencies — in one minute."
+            "live DoD state and merge-eligibility. PM is a status-view role — "
+            "value is the live DoD, not an authored gate. Never invent "
+            "timelines or velocity."
         ),
         "reads": (
-            "The PR (title, files, TODOs), file-scoped convention_check JSON, "
-            "CI conclusion, owner=pm rows, projections/pm/definition-of-done.md."
+            "ONE change-context (pr.number/title/issue/milestone/labels/draft, "
+            "ci.*, state) fused with file-scoped convention_check JSON. Offline "
+            "stand-in: examples/change_context.example.json. Owner=pm rows "
+            "(DOC001, warn). projections/pm/definition-of-done.md."
         ),
         "output": (
-            "status digest: what this increment actually is, timeline impact, "
-            "dependencies, project risks, mechanical vs product DoD."
+            "status digest: declared DoD state, mechanical merge-eligibility "
+            "from gate blocking, issue/milestone. Scaffold ≠ product-done."
+        ),
+        "cannot_see": (
+            "Team velocity / sprint capacity. Roadmap dependencies beyond this "
+            "PR's issue/milestone. Calendar ship dates."
         ),
         "briefing": """\
-Write a PM digest a non-engineer can use. Do not dump rule ids without translation.
+Write a PM digest a non-engineer can use. Lead with DoD state and
+merge-eligibility, then issue/milestone. Fuse the change-context with
+the gate — one briefing. Do not dump rule ids without translation.
 
-### Impact
-What landed in *this* PR (contract scaffold vs shippable feature). Say plainly
-if `TODO(engineer)` means the math is still a follow-up.
+### DoD state
+Lead with context.state (`scaffolded` | `gate-green` | `tests-pass` |
+`merge-eligible`). Say plainly: scaffold ≠ product-done.
 
-### Timeline
-Can review start now? What work is *not* in this increment? Do not call a
-scaffold "scheduler done."
+### Merge-eligibility
+YES only if gate blocking count is 0 `[gate]`. Else NO. Product-done is
+a human call; a green scaffold is not a shipped scheduler.
 
-### Dependencies
-Torch for behavioral tests; overlay gate ≠ Hugging Face CI (upstream Actions
-may be red and that is expected); kit clone at `ramp-kit/` on the fork.
+### Issue / milestone
+From context.pr.issue and context.pr.milestone `[issue]`. If missing,
+say you cannot see it — do not guess.
 
-### Project risks
-Scope creep (treating overlay-green as released). Open DoD boxes. Anything
-that would slip the first-contribution path.
+### PM-owned registry rows
+DOC001 is warn/docs, not a scope gate. PM does not own a blocking check.
+Value is the live DoD view, not an authored gate.
 
 ### Call
-Mechanical merge-eligible: YES/NO. Product-done: almost always NO on a
-scaffold. Next human action in one line.""",
+Mechanical merge-eligible: YES/NO `[gate]`. Product-done: NO on a
+scaffold `[issue]`. Next human action in one tagged line. No ETA.""",
     },
     "qa": {
         "bot_name": "Ramp Kit QA",
@@ -106,30 +124,34 @@ scaffold. Next human action in one line.""",
         "title": "QA risk briefing",
         "job": (
             "When a first-contribution PR is opened or updated, tell QA — from a "
-            "testing point of view — impact, coverage, and residual risk."
+            "testing point of view — test adequacy (owner=qa) and residual math "
+            "risk."
         ),
         "reads": (
-            "The PR diff (scheduler + test), file-scoped convention_check JSON, "
-            "CI conclusion, owner=qa rows, projections/qa/review-checklist.md."
+            "ONE change-context fused with file-scoped convention_check JSON "
+            "(owner=qa rows TEST001/TEST002 first). Offline stand-in: "
+            "examples/change_context.example.json. PR diff (scheduler + test), "
+            "projections/qa/review-checklist.md."
         ),
         "output": (
-            "QA risk briefing: testing impact, what the gate covered, residual "
-            "human risk (math, duplication, missing integration)."
+            "QA risk briefing: test-adequacy first, then residual human risk "
+            "(math, duplication, missing integration)."
+        ),
+        "cannot_see": (
+            "Real numerical correctness vs the paper. Whether the sampler "
+            "duplicates EulerDiscrete in meaning. GPU pipeline integration."
         ),
         "briefing": """\
-Write a QA & testing summary. Lead with residual risk, not a finding dump.
+Write a QA & testing summary. Lead with test adequacy (owner=qa rules),
+then residual math risk. Fuse the change-context with the gate.
 
-### Impact
-What is under test (new scheduler? contract test only?). Note skipped
-behavioral tests when torch is absent.
+### Test adequacy
+TEST001/TEST002: presence, assertions, same-seed determinism,
+shape/dtype `[gate]`. Note skipped behavioral tests when torch is absent.
 
-### Covered
-Gate/TEST001/TEST002: presence, assertions, same-seed determinism,
-shape/dtype. Structural mixins and signatures.
-
-### Residual risk
-Numerical method vs the paper. Pipeline integration. Duplication of an
-existing scheduler (e.g. EulerDiscrete). Overlay-green is not "tested."
+### Residual math risk
+Numerical method vs the paper is outside the gate. Overlay-green is not
+"tested." Duplication of an existing scheduler (e.g. EulerDiscrete).
 
 ### Ask of QA
 What a human must still judge before this can be called quality-complete.
@@ -141,36 +163,38 @@ Do not treat overlay clearance as a pass on the sampler.""",
         "title": "DevOps health signal",
         "job": (
             "When a first-contribution PR is opened or updated, tell DevOps the "
-            "CI/CD impact: overlay gate, inherited Actions, drift, attachability."
+            "pipeline health: CI conclusion, drift_check, inherited_workflows. "
+            "Do not lead with scheduler findings."
         ),
         "reads": (
-            "The PR files, file-scoped convention_check JSON, GitHub Actions on "
-            "the PR, projection drift, verify_scheduler_contract, overlay/mcp.json, "
-            "owner=devops rows."
+            "ONE change-context (ci.convention_gate, ci.drift_check, "
+            "ci.inherited_workflows) fused with file-scoped convention_check "
+            "JSON. Offline stand-in: examples/change_context.example.json. "
+            "Owner=devops rows."
         ),
         "output": (
-            "CI/CD impact summary: overlay exit, HF CI vs overlay clearance, "
-            "drift/contract, device/MCP, signal RED/GREEN mechanical."
+            "CI/CD impact summary: convention_gate, drift, inherited "
+            "workflows, then mechanical RED/GREEN. Not a scheduler recap."
+        ),
+        "cannot_see": (
+            "Production deploy environment. Whether inherited Hugging Face CI "
+            "will go green on this fork. Secrets and runner-fleet health."
         ),
         "briefing": """\
-Write a CI/CD impact note. Cheap pipeline first. Do not "fix" red HF jobs
-by deleting inherited workflows.
+Write a CI/CD impact note. Lead with pipeline health (CI conclusion,
+drift_check, inherited_workflows) — not scheduler findings. Cheap
+pipeline first. Do not "fix" red HF jobs by deleting inherited workflows.
 
-### Impact
-How many files, whether the overlay job stays GPU-less, whether the gate
-was file-scoped (required) or `--all` on the library (forbidden).
+### Pipeline health
+`[ci]` convention_gate. `[drift]` drift_check. `[ci]` inherited_workflows.
+File-scoped overlay gate vs `--all` on the library (forbidden).
 
 ### Overlay vs upstream CI
 Overlay 0 findings = customer clearance. Inherited Hugging Face Actions
 may be red on a fork demo — expected, not a reason to disable them.
 
-### Health checks
-DEVICE001 / LOG001 / CUST001. Projection drift. Scheduler contract
-re-verify (OK / SKIP / DRIFT). Default overlay MCP must stay empty.
-
 ### Signal
-RED if overlay blocking > 0. GREEN mechanical ≠ upstream-green. One line
-on whether the fork is still attachable.
+RED if overlay blocking > 0 `[gate]`. GREEN mechanical ≠ upstream-green.
 
 ### Optional: after merge (DevOps only)
 If the event is `closed` and merged, write four lines max: landed on
@@ -621,9 +645,11 @@ def _grokbot_routine(role: str, spec: dict) -> str:
         f"2. Read {KIT_DIR}/agents/grokbot-{role}.md — that file wins.\n"
         "3. Open the PR. File-scoped convention_check on changed scheduler/"
         f"test files only (never --all). Kit tools live in {KIT_DIR}/tools "
-        "or ramp-kit/tools on the fork.\n"
-        "4. Write the role briefing from the spec (impact / risks / CI). "
-        "Optional: one PR comment with that briefing. Do not approve, "
+        "or ramp-kit/tools on the fork. Fuse PR/CI/state with that JSON "
+        "(offline: examples/change_context.example.json).\n"
+        "4. Write the role briefing from the spec. Every claim cites "
+        "[gate]/[ci]/[issue]/[drift]. Include Cannot see. Optional: one "
+        "PR comment with that briefing. Do not approve, "
         "request-changes-as-gate, merge, or fail a job.\n"
         + extra
     )
@@ -672,11 +698,22 @@ def build_grokbot_specs():
             "## Reads (inputs)",
             spec["reads"],
             "",
+            "## Role-native input",
+            "Fuse ONE change-event (PR + CI + declared state) with the gate JSON.",
+            "Offline demo: `examples/change_context.example.json` via",
+            f"`python3 tools/grokbot_sim.py --role {role} --context examples/change_context.example.json`.",
+            "",
             "## Briefing to write",
             spec["briefing"].rstrip(),
             "",
             f"Owner-tagged registry rows (`owner: {role}`): `{_owned_ids(role)}`.",
             "Use them as checklist context, not as the whole briefing.",
+            "",
+            "## Grounding",
+            GROKBOT_GROUNDING,
+            "",
+            "## Cannot see",
+            spec["cannot_see"],
             "",
             "## Owner-tagged rules (appendix)",
             "",

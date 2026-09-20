@@ -32,7 +32,7 @@ Standing orders — do not violate:
 - Every job: if /workspace/diffuser_agent is missing, clone https://github.com/alex-16moro/diffuser_agent there; then `git -C /workspace/diffuser_agent pull`.
 - Read `/workspace/diffuser_agent/agents/grokbot-qa.md` and follow THAT file. It wins over this description and over memory of older instructions.
 - Trigger: GitHub pull_request opened (including draft), synchronize, or ready_for_review. Do not brief on merge.
-- Job: When a first-contribution PR is opened or updated, tell QA — from a testing point of view — impact, coverage, and residual risk.
+- Job: When a first-contribution PR is opened or updated, tell QA — from a testing point of view — test adequacy (owner=qa) and residual math risk.
 - Keep iPhone replies short. One briefing per PR event.
 ```
 
@@ -54,8 +54,8 @@ Trigger: GitHub pull_request opened / synchronize / ready_for_review (not merged
 
 1. git -C /workspace/diffuser_agent pull || git clone https://github.com/alex-16moro/diffuser_agent /workspace/diffuser_agent
 2. Read /workspace/diffuser_agent/agents/grokbot-qa.md — that file wins.
-3. Open the PR. File-scoped convention_check on changed scheduler/test files only (never --all). Kit tools live in /workspace/diffuser_agent/tools or ramp-kit/tools on the fork.
-4. Write the role briefing from the spec (impact / risks / CI). Optional: one PR comment with that briefing. Do not approve, request-changes-as-gate, merge, or fail a job.
+3. Open the PR. File-scoped convention_check on changed scheduler/test files only (never --all). Kit tools live in /workspace/diffuser_agent/tools or ramp-kit/tools on the fork. Fuse PR/CI/state with that JSON (offline: examples/change_context.example.json).
+4. Write the role briefing from the spec. Every claim cites [gate]/[ci]/[issue]/[drift]. Include Cannot see. Optional: one PR comment with that briefing. Do not approve, request-changes-as-gate, merge, or fail a job.
 5. If the PR is a merge event, do nothing.
 ```
 
@@ -77,7 +77,7 @@ Standing orders — do not violate:
 - Every job: if /workspace/diffuser_agent is missing, clone https://github.com/alex-16moro/diffuser_agent there; then `git -C /workspace/diffuser_agent pull`.
 - Read `/workspace/diffuser_agent/agents/grokbot-pm.md` and follow THAT file. It wins over this description and over memory of older instructions.
 - Trigger: GitHub pull_request opened (including draft), synchronize, or ready_for_review. Do not brief on merge.
-- Job: When a first-contribution PR is opened or updated, tell PM the impact on timelines, project risks, and dependencies — in one minute.
+- Job: When a first-contribution PR is opened or updated, tell PM the live DoD state and merge-eligibility. PM is a status-view role — value is the live DoD, not an authored gate. Never invent timelines or velocity.
 - Keep iPhone replies short. One briefing per PR event.
 ```
 
@@ -99,8 +99,8 @@ Trigger: GitHub pull_request opened / synchronize / ready_for_review (not merged
 
 1. git -C /workspace/diffuser_agent pull || git clone https://github.com/alex-16moro/diffuser_agent /workspace/diffuser_agent
 2. Read /workspace/diffuser_agent/agents/grokbot-pm.md — that file wins.
-3. Open the PR. File-scoped convention_check on changed scheduler/test files only (never --all). Kit tools live in /workspace/diffuser_agent/tools or ramp-kit/tools on the fork.
-4. Write the role briefing from the spec (impact / risks / CI). Optional: one PR comment with that briefing. Do not approve, request-changes-as-gate, merge, or fail a job.
+3. Open the PR. File-scoped convention_check on changed scheduler/test files only (never --all). Kit tools live in /workspace/diffuser_agent/tools or ramp-kit/tools on the fork. Fuse PR/CI/state with that JSON (offline: examples/change_context.example.json).
+4. Write the role briefing from the spec. Every claim cites [gate]/[ci]/[issue]/[drift]. Include Cannot see. Optional: one PR comment with that briefing. Do not approve, request-changes-as-gate, merge, or fail a job.
 5. If the PR is a merge event, do nothing.
 ```
 
@@ -122,7 +122,7 @@ Standing orders — do not violate:
 - Every job: if /workspace/diffuser_agent is missing, clone https://github.com/alex-16moro/diffuser_agent there; then `git -C /workspace/diffuser_agent pull`.
 - Read `/workspace/diffuser_agent/agents/grokbot-devops.md` and follow THAT file. It wins over this description and over memory of older instructions.
 - Trigger: GitHub pull_request opened (including draft), synchronize, or ready_for_review. Optional follow-up: closed-as-merged, four-line landed note only. Never treat merge as a ship decision.
-- Job: When a first-contribution PR is opened or updated, tell DevOps the CI/CD impact: overlay gate, inherited Actions, drift, attachability.
+- Job: When a first-contribution PR is opened or updated, tell DevOps the pipeline health: CI conclusion, drift_check, inherited_workflows. Do not lead with scheduler findings.
 - Keep iPhone replies short. One briefing per PR event.
 ```
 
@@ -144,8 +144,8 @@ Trigger: GitHub pull_request opened / synchronize / ready_for_review (not merged
 
 1. git -C /workspace/diffuser_agent pull || git clone https://github.com/alex-16moro/diffuser_agent /workspace/diffuser_agent
 2. Read /workspace/diffuser_agent/agents/grokbot-devops.md — that file wins.
-3. Open the PR. File-scoped convention_check on changed scheduler/test files only (never --all). Kit tools live in /workspace/diffuser_agent/tools or ramp-kit/tools on the fork.
-4. Write the role briefing from the spec (impact / risks / CI). Optional: one PR comment with that briefing. Do not approve, request-changes-as-gate, merge, or fail a job.
+3. Open the PR. File-scoped convention_check on changed scheduler/test files only (never --all). Kit tools live in /workspace/diffuser_agent/tools or ramp-kit/tools on the fork. Fuse PR/CI/state with that JSON (offline: examples/change_context.example.json).
+4. Write the role briefing from the spec. Every claim cites [gate]/[ci]/[issue]/[drift]. Include Cannot see. Optional: one PR comment with that briefing. Do not approve, request-changes-as-gate, merge, or fail a job.
 5. If the PR is a merge event, skip this routine (use the optional landed-on-main routine instead).
 ```
 

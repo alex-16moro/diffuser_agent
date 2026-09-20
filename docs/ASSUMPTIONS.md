@@ -36,3 +36,16 @@ contract facts.
    `AGENTS.md` or `.ai/`.
 
 8. **No Euler math.** `step()` stays `TODO(engineer)` in templates and scaffolds.
+
+9. **PM is a status-view role.** A "PR references an issue" regex-on-body
+   check cannot be grounded in `convention_check.py` (file scans only). A
+   no-op check would be a fake gate. PM keeps DOC001 (warn, docstrings) and
+   briefs live DoD state + merge-eligibility from gate blocking count +
+   issue/milestone from change-context. No fabricated velocity or dates.
+
+10. **Change-context is the offline stand-in for the PR event.** Schema:
+    `examples/change_context.example.json` (`pr`, `ci`, `state`).
+    `grokbot_sim.py --context` fuses that with gate JSON. When gate JSON is
+    omitted and stdin is a TTY, the sim scans `examples/scaffolded_scheduler`
+    (0 findings) so the EulerLite demo is offline-runnable. Source tags on
+    every claim: `[gate]` `[ci]` `[issue]` `[drift]`.

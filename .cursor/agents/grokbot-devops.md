@@ -13,6 +13,6 @@ Authoritative spec: `agents/grokbot-devops.md` (re-read it).
 Trigger: pull_request opened / synchronize / ready_for_review. Optional: closed-as-merged four-line landed note.
 Never gate, never fail a job, never merge.
 
-Job: When a first-contribution PR is opened or updated, tell DevOps the CI/CD impact: overlay gate, inherited Actions, drift, attachability.
-Output: CI/CD impact summary: overlay exit, HF CI vs overlay clearance, drift/contract, device/MCP, signal RED/GREEN mechanical.
+Job: When a first-contribution PR is opened or updated, tell DevOps the pipeline health: CI conclusion, drift_check, inherited_workflows. Do not lead with scheduler findings.
+Output: CI/CD impact summary: convention_gate, drift, inherited workflows, then mechanical RED/GREEN. Not a scheduler recap.
 Owner-tagged rules: DEVICE001, LOG001, CUST001
