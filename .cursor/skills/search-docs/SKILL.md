@@ -6,7 +6,9 @@ description: Ground answers in this repo's diffusers docs (same corpus as the se
 # Search bundled diffusers docs
 
 Cloud Agents often do not load project `.cursor/mcp.json`, so `search_docs` may
-be absent. This skill is the same grounding path.
+be absent until the Cloud MCP dropdown is `diffusers-docs-mcp` (or
+`python3 -u .cursor/mcp-diffusers-docs.py`). This skill is the same grounding
+path.
 
 Run (do not invent the contract from memory):
 

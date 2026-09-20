@@ -50,10 +50,11 @@ Pre-flight (before they sit):
 
 - **Kit (this repo):** `make doctor`. Catch-early fixture is here.
 - **Cloud Agent:** launch on **`alex-16moro/diffusers`**, branch `main` (not this
-  kit). Default overlay `.cursor/mcp.json` is `{ "mcpServers": {} }` — do **not**
-  enable Hub HTTP or stdio MCP for the demo. The paste is Prompt A: copy
-  templates, file-scoped gate. Catch-early stays on this kit, not in the paste.
-  Opt-in copy: `.cursor/mcp.optional.json` (Desktop only).
+  kit). Overlay `.cursor/mcp.json` is stdio `diffusers-docs` only. Enable that
+  in the Cloud MCP dropdown (`diffusers-docs-mcp` or
+  `python3 -u .cursor/mcp-diffusers-docs.py`). Do **not** enable Hub HTTP.
+  The paste is Prompt A: copy templates, file-scoped gate. Catch-early stays
+  on this kit, not in the paste.
 - Paste **Prompt A (fork)** from `docs/CURSOR_PROMPTS.md`.
 
 Then type:
@@ -156,16 +157,16 @@ Two files, two launch targets:
 | Launch on | File | What install does |
 |-----------|------|-------------------|
 | **This kit** | `.cursor/environment.json` | `pip install -r requirements.txt`; optional MCP launcher. Declares the fork as a repo dependency. |
-| **The fork** | `overlay/environment.json` (copied to fork `.cursor/environment.json` by `make attach`) | Clones this kit to `ramp-kit/` if missing; `pip install -r ramp-kit/requirements.txt`; `python3 ramp-kit/tools/docs_mcp_server.py --selftest`. Default fork `.cursor/mcp.json` is `{ "mcpServers": {} }`. |
+| **The fork** | `overlay/environment.json` (copied to fork `.cursor/environment.json` by `make attach`) | Clones this kit to `ramp-kit/` if missing; `pip install -r ramp-kit/requirements.txt`; installs `diffusers-docs-mcp`; `python3 ramp-kit/tools/docs_mcp_server.py --selftest`. Fork `.cursor/mcp.json` is stdio `diffusers-docs` only (no Hub HTTP). |
 
 Dry-run locally (does not boot a Cloud VM):
 
 ```bash
 python3 -c "import json; print(json.dumps(json.load(open('overlay/environment.json')), indent=2))"
 python3 -c "import json; print(json.dumps(json.load(open('.cursor/environment.json')), indent=2))"
-make attach TARGET=../diffusers   # copies empty mcp.json; does not touch AGENTS.md / .ai/
+make attach TARGET=../diffusers   # copies stdio mcp.json; does not touch AGENTS.md / .ai/
 python3 -c "import json; print(json.load(open('../diffusers/.cursor/mcp.json')))"
-# expected: {'mcpServers': {}}
+# expected: mcpServers.diffusers-docs stdio, no huggingface
 ```
 
 If a Cloud Agent is already on the fork, the boot install is that JSON. You do not re-run attach live unless `.cursor/` is missing. Overlay clearance is still the file-scoped gate, not Hugging Face Actions.

@@ -22,7 +22,9 @@ These were made before this submission pass. Do not silently reopen them.
    `.github/workflows/ramp-kit-overlay.yml` (attached), not the kit's
    `convention-gate.yml`.
 
-5. **Default fork MCP is empty.** Cloud launches must not prompt for Hub OAuth
-   or broken stdio cwd. CLI `docs_mcp_server.py --query` is the fallback.
+5. **Default fork MCP is stdio `diffusers-docs` only.** Never Hub HTTP (OAuth).
+   Cloud dropdown: `diffusers-docs-mcp` or `python3 -u .cursor/mcp-diffusers-docs.py`.
+   The launcher must resolve from the workspace root (`/agent`), not only the
+   git repo. CLI `--query` remains a fallback.
 
 6. **Scaffold the contract, not the sampler.** Leave `TODO(engineer)` in `step()`.
