@@ -1,6 +1,6 @@
 <!-- GENERATED from conventions/rules.yaml by tools/build_projections.py. DO NOT EDIT. Run `make build`. -->
 
-# Grok Bot profiles (iPhone + desktop)
+# Grok Bot profiles
 
 Grok Bot does **not** import git. Paste this **short stub** into
 **Edit Profile** once. The Bot `git pull`s the kit and reads
