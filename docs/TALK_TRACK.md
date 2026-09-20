@@ -58,13 +58,13 @@ open on the fork until they have seen the registry and the gate.
    show how the YAML was verified (`set_timesteps`, not
    `set_num_inference_steps`). That is not the engineer's diff. Their
    checklist is `ramp-kit/conventions/rules.yaml` plus the overlay templates.
-2. **Scaffold.** `/scaffold scheduler HeunLite` writes
-   `src/diffusers/schedulers/scheduling_heun_lite.py`. Open the
-   `TODO(engineer)` in `step`. "Two files the gate checks. Not a sampler."
-3. **File-scoped gate only** — never `--all` on this library. 0 blocking on the
-   new file; behavioral tests skip without torch.
-4. **PR this fork**, draft, **base `main`**, title `[fork demo — not for upstream]`. Overlay
-   clearance ≠ Hugging Face CI. We do **not** delete inherited workflow files.
+2. **Scaffold.** `/scaffold scheduler <unused Name>` copies overlay templates,
+   registers the class, and invokes `make style` / `make quality`. Open the
+   `TODO(engineer)` in `step`. "Not a sampler. Library quality before the PR."
+3. **File-scoped overlay gate only** — never `--all` on this library. 0 blocking
+   on the new file. Then library `make quality` until green.
+4. **PR this fork**, draft, **base `main`**, title `[fork demo — not for upstream]`.
+   Overlay gate plus library quality. We do **not** delete inherited workflow files.
 
 Do not run kit `KEEP=1` before the fork agent if you want those files to appear
 live on the fork.

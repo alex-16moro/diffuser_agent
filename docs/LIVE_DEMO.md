@@ -12,7 +12,7 @@ Two ways to play the same journey after the kit beat:
 
 | Path | When |
 |------|------|
-| **A. Cloud Agent on the fork** (`/scaffold scheduler HeunLite`) | Primary. Real `src/diffusers/schedulers/`. Two files the registry checks. |
+| **A. Cloud Agent on the fork** (`/scaffold scheduler <unused Name>`) | Primary. Real `src/diffusers/schedulers/`. Overlay templates + library `make style` / `make quality`. |
 | **B. CLI twin in this kit** (`make demo-contribute KEEP=1`) | Rehearsal if the fork VM is slow. Stand-in tree only. |
 
 Do **not** run Path B first if you want Path A to create the files live.
@@ -34,12 +34,12 @@ plan → ground → build → gate → test → review → CI clearance
 | 0. Pre-flight | you | `make doctor` **on the kit** | “Python3, PyYAML, Cursor files present.” |
 | 1. Plan | PM + engineer | `.github/ISSUE_TEMPLATE/contribution.md` | “Done is the same checklist CI will run.” |
 | 2. Catch-early | QA / engineer | gate on kit `examples/candidate_scheduler` | “8 blocking: moved import, missing mixin, `.cuda()`, no test. That’s a review round-trip. This is the overlay, not the library.” |
-| 3. Ground | engineer | `ramp-kit/conventions/rules.yaml` + overlay templates | “Done is the gate. Templates already pass. I am not copying Euler/DDPM or writing docs.” |
-| 4. Build | engineer | `/scaffold scheduler HeunLite` **on the fork** | “Two files. `TODO(engineer)` stays in `step()`.” |
-| 5. Gate | engineer + CI | check the **new file only** | “0 blocking. Same script as the edit hook. Never `--all` on this library.” |
-| 6. Test | engineer | unittest on the new test | “Signatures pass; behavioral tests skip without torch — expected.” |
+| 3. Ground | engineer | `ramp-kit/conventions/rules.yaml` + overlay templates + root `AGENTS.md` | “Overlay registry plus the library's own agent guide. Templates already pass. I am not copying Euler/DDPM math.” |
+| 4. Build | engineer | `/scaffold scheduler <unused Name>` **on the fork** | “Template copy, public-API registration, `TODO(engineer)` stays in `step()`.” |
+| 5. Gate | engineer + CI | file-scoped overlay gate **and** `make style` / `make quality` | “0 blocking on the new file. Library quality green. Never `--all` on this library.” |
+| 6. Test | engineer | unittest on the new test | “Signatures pass; with torch, count/shape/dtype/determinism pass. Do not edit `step()` math.” |
 | 7. Review | QA | `projections/qa/review-checklist.md` | “Gate took the mechanical items. Humans judge the paper.” |
-| 8. Clearance | DevOps | overlay gate green; HF Actions may be red | “Overlay clearance ≠ upstream CI. I don’t fake deploy, and I don’t disable their workflows.” |
+| 8. Clearance | DevOps | overlay gate green **and** `check_code_quality` / `check_repository_consistency` | “Customer gate plus library quality. I don’t fake deploy, and I don’t disable their workflows.” |
 | 9. Maintain | platform | `make demo-maintain` on the **kit** (if time) | “One YAML edit. I’m gone; they still own it. Not a tool per SDLC step.” |
 
 ---
@@ -57,20 +57,23 @@ Pre-flight (before they sit):
   on this kit, not in the paste.
 - Paste **Prompt A (fork)** from `docs/CURSOR_PROMPTS.md`.
 
-Then type:
+Then type (`HeunLite` / `EulerLite` already exist on fork `main` — pick an unused `$2`):
 
 ```
-/scaffold scheduler HeunLite
+/scaffold scheduler <unused Name>
 ```
 
-The agent should only run:
+The agent should copy overlay templates, register the class, then invoke:
 
 ```bash
-python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_heun_lite.py
-python3 -m unittest tests.schedulers.test_scheduling_heun_lite -v
+python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_<snake>.py
+python3 -m unittest tests.schedulers.test_scheduling_<snake> -v
+make style
+make quality
+python utils/check_copies.py && python utils/check_dummies.py && python utils/check_repo.py
 ```
 
-Point at the `TODO(engineer)` in `step`. Stop.
+Point at the `TODO(engineer)` in `step`. Stop. Do not skip library `make quality`.
 
 You (not the engineer paste) may still show catch-early, GrokBot, and
 contract re-verify from the kit:
@@ -136,7 +139,7 @@ Default `make demo-contribute` **creates, proves, and deletes** (safe to run in 
 - **30–38** judgment (schedulers first, empty default MCP, no embeddings, no auto-fix, stop at CI)
 - **38–45** where it breaks + `make demo-maintain` on the kit if not already shown
 
-If time is tight, skip maintain and skip Path A’s agent: run Path B with `KEEP=1` and still open the two files.
+If time is tight, skip maintain and skip Path A’s agent: run Path B with `KEEP=1` and still open the scaffolded files.
 
 ---
 
@@ -169,5 +172,5 @@ python3 -c "import json; print(json.load(open('../diffusers/.cursor/mcp.json')))
 # expected: mcpServers.diffusers-docs stdio, no huggingface
 ```
 
-If a Cloud Agent is already on the fork, the boot install is that JSON. You do not re-run attach live unless `.cursor/` is missing. Overlay clearance is still the file-scoped gate, not Hugging Face Actions.
+If a Cloud Agent is already on the fork, the boot install is that JSON. You do not re-run attach live unless `.cursor/` is missing. Clearance is the file-scoped overlay gate **plus** library `make style` / `make quality`. Inherited jobs that need Hugging Face runners or size labels may still be red on this personal fork; that is hosting, not a reason to skip `make quality`.
 
