@@ -132,7 +132,13 @@ def _finding_line(f: dict, rec: dict | None = None) -> str:
     )
 
 
-def brief(role: str, gate: dict, rules: dict, context: dict | None = None) -> str:
+def brief(
+    role: str,
+    gate: dict,
+    rules: dict,
+    context: dict | None = None,
+    packaging: dict | None = None,
+) -> str:
     context = context or {}
     findings = gate.get("findings") or []
     blocking = gate.get(
@@ -226,6 +232,30 @@ def brief(role: str, gate: dict, rules: dict, context: dict | None = None) -> st
                 "this briefing never fails a job and never merges.",
             )
         )
+        lines.append("")
+        lines.append("## Packaging")
+        if packaging and packaging.get("verdict"):
+            lines.append(
+                _bullet("ci", f"verdict: {packaging.get('verdict')}")
+            )
+            if packaging.get("object"):
+                lines.append(_bullet("ci", f"object: {packaging.get('object')}"))
+            proven = packaging.get("diffusers_file") or ""
+            if proven:
+                lines.append(_bullet("ci", f"diffusers.__file__: {proven}"))
+            for st in packaging.get("steps") or []:
+                lines.append(
+                    _bullet(
+                        "ci",
+                        f"{st.get('name')}: {st.get('status')} ({st.get('command')})",
+                    )
+                )
+            for adv in packaging.get("advisories") or []:
+                lines.append(_bullet("ci", f"advisory: {adv}"))
+            if packaging.get("note"):
+                lines.append(_bullet("ci", packaging["note"]))
+        else:
+            lines.append(_bullet("ci", "packaging check not wired"))
     elif role == "pm":
         lines.append("## DoD state")
         if declared_state in VALID_STATES:
@@ -402,6 +432,12 @@ def main(argv=None) -> int:
         help="optional change-context JSON (pr / ci / state)",
     )
     ap.add_argument(
+        "--release-json",
+        metavar="FILE.json",
+        help="JSON from a prior `release_check.py --object <detected> --json` "
+        "run on the fork. Reads that report; never runs python -m build.",
+    )
+    ap.add_argument(
         "gate_json",
         nargs="?",
         help="path to convention_check --json output (default: stdin, "
@@ -410,7 +446,10 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     gate = read_gate(args.gate_json)
     context = read_context(args.context)
-    sys.stdout.write(brief(args.role, gate, load_rules(), context))
+    packaging = None
+    if args.release_json:
+        packaging = json.loads(Path(args.release_json).read_text(encoding="utf-8"))
+    sys.stdout.write(brief(args.role, gate, load_rules(), context, packaging))
     return 0
 
 

@@ -390,10 +390,18 @@ class TestGrokbotSim(unittest.TestCase):
         self.assertIn('"findings"', proc.stdout)
         return proc.stdout
 
-    def _sim(self, role: str, gate_json: str | None = None, context: bool = True) -> str:
+    def _sim(
+        self,
+        role: str,
+        gate_json: str | None = None,
+        context: bool = True,
+        release_json: Path | None = None,
+    ) -> str:
         cmd = [sys.executable, str(ROOT / "tools" / "grokbot_sim.py"), "--role", role]
         if context:
             cmd.extend(["--context", str(self.CONTEXT)])
+        if release_json is not None:
+            cmd.extend(["--release-json", str(release_json)])
         if gate_json is None:
             gate_json = self._gate_json("scaffolded_scheduler")
         proc = subprocess.run(
@@ -492,6 +500,68 @@ class TestGrokbotSim(unittest.TestCase):
             self.assertIn(key, data["ci"], key)
         self.assertIn(data["state"], ("scaffolded", "gate-green", "tests-pass", "merge-eligible"))
         self.assertIn("EulerLite", data["pr"]["title"] + data["pr"]["issue"])
+
+    def test_devops_packaging_not_wired_without_json(self):
+        out = self._sim("devops")
+        self.assertIn("## Packaging", out)
+        self.assertIn("packaging check not wired", out)
+        self.assertNotIn("BUILD-VERIFIED", out)
+
+    def test_devops_packaging_fed_by_release_json(self):
+        with tempfile.TemporaryDirectory() as td:
+            report = Path(td) / "packaging.json"
+            report.write_text(json.dumps({
+                "verdict": "BUILD-VERIFIED / PACKAGING-ELIGIBLE",
+                "object": "PNDMLiteScheduler",
+                "diffusers_file": "/tmp/site-packages/diffusers/__init__.py",
+                "steps": [
+                    {"name": "dependency_contract", "status": "pass",
+                     "command": "pytest tests/others/test_dependencies.py -q"},
+                ],
+                "advisories": ["step() still TODO(engineer); this is a scaffold, not a product release"],
+                "note": "Stops at build-verified. Handoff: the customer's index, creds, and tag. Not CD.",
+            }))
+            out = self._sim("devops", release_json=report)
+        self.assertIn("## Packaging", out)
+        self.assertIn("BUILD-VERIFIED / PACKAGING-ELIGIBLE", out)
+        self.assertIn("PNDMLiteScheduler", out)
+        self.assertIn("site-packages", out)
+        self.assertIn("TODO(engineer)", out)
+        self.assertNotIn("release-eligible", out.lower())
+        self.assertNotIn("packaging check not wired", out)
+        pm = self._sim("pm")
+        self.assertNotIn("## Packaging", pm)
+
+    def test_grokbot_sim_does_not_invoke_build(self):
+        src = (ROOT / "tools" / "grokbot_sim.py").read_text()
+        self.assertNotIn("python -m build", src.replace("never runs python -m build", ""))
+        from grokbot_sim import VALID_STATES  # noqa: WPS433
+        self.assertEqual(
+            VALID_STATES,
+            ("scaffolded", "gate-green", "tests-pass", "merge-eligible"),
+        )
+
+
+class TestReleaseCheckWrapper(unittest.TestCase):
+    def test_refuses_kit_standin(self):
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "release_check.py"),
+             "--object", "PNDMLiteScheduler", "--json"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, "DIFFUSERS_ROOT": str(ROOT)},
+        )
+        self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+        self.assertIn("not the kit stand-in", proc.stderr)
+
+    def test_verdict_wording(self):
+        src = (ROOT / "tools" / "release_check.py").read_text()
+        self.assertIn("BUILD-VERIFIED / PACKAGING-ELIGIBLE", src)
+        self.assertNotIn("release-eligible", src.lower())
+        self.assertNotIn('"ship"', src.lower())
+        self.assertIn("TODO(engineer)", src)
 
 
 class TestGrokbotIphonePack(unittest.TestCase):

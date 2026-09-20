@@ -6,4 +6,5 @@ __pycache__/
 venv/
 *.egg-info/
 convention-report.json
+dist/
 .DS_Store
