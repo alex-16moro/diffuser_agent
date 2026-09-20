@@ -93,10 +93,10 @@ as it grows.
 | # | Requirement | How this kit meets it |
 |---|-------------|-----------------------|
 | 1 | Scaffold a correct first contribution | `/scaffold <component> <Name>` command + per-component `.cursor/rules/10-*.mdc` + a correct reference (`examples/scaffolded_scheduler/`) + the `diffusers-docs` MCP for grounding |
-| 2 | Catch mistakes early, strengthen tests | `tools/convention_check.py` (AST + regex, 14 rules: 13 upstream + 1 example customer guardrail) + generated test scaffold with behavioral contracts; runs in-editor via `.cursor/hooks.json` |
-| 3 | Fit CI, stay in approved boundaries | `.github/workflows/convention-gate.yml` runs the *same* gate + MCP self-test + tests (generated from the registry). `.cursorignore` is the agent's context boundary. Green gate = merge-eligible / release clearance. |
-| 4 | Stay maintainable as the library evolves | One `rules.yaml` the team edits; add a rule → every surface updates. `build_projections.py` fails if a rule isn't enforced |
-| 5 | Work for PM, QA, DevOps too | `projections/pm`, `projections/qa`, `projections/devops` are generated from the same rules |
+| 2 | Catch mistakes early, strengthen tests | `tools/convention_check.py` (AST + regex) including **TEST002** weak-test / determinism / shape-dtype; in-editor hook; GrokBot QA sim reads `--json` |
+| 3 | Fit CI, stay in approved boundaries | Generated `.github/workflows/convention-gate.yml`: same gate + **projection drift** + **contract re-verify** + tests. `.cursorignore`. Overlay MCP empty by default. File-scoped on the fork. |
+| 4 | Stay maintainable as the library evolves | One `rules.yaml` with `owner:` tags; `make build` / `make demo-maintain`; `verify_scheduler_contract.py` vs fork source; build fails if a check or owner is missing |
+| 5 | Work for PM, QA, DevOps too | Same registry. Projections **group by owner**. GrokBot specs generated per around-engineering role; `grokbot_sim.py --role qa` is a simulation, not a second gate |
 
 Built for **Cursor**: rules (`.cursor/rules/*.mdc`), a command
 (`.cursor/commands/scaffold.md`), an edit hook (`.cursor/hooks.json`), an MCP
