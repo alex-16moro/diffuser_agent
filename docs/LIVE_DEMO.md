@@ -154,10 +154,10 @@ Do not commit `scheduling_euler_lite.py` unless you explicitly want it as a fixt
 
 Two files, two launch targets:
 
-| Launch on | File | What install does |
+| Launch on | File | What install / start do |
 |-----------|------|-------------------|
-| **This kit** | `.cursor/environment.json` | `pip install -r requirements.txt`; optional MCP launcher. Declares the fork as a repo dependency. |
-| **The fork** | `overlay/environment.json` (copied to fork `.cursor/environment.json` by `make attach`) | Clones this kit to `ramp-kit/` if missing; `pip install -r ramp-kit/requirements.txt`; installs `diffusers-docs-mcp`; `python3 ramp-kit/tools/docs_mcp_server.py --selftest`. Fork `.cursor/mcp.json` is stdio `diffusers-docs` only (no Hub HTTP). |
+| **This kit** | `.cursor/environment.json` | `install`: `.cursor/cloud-install.sh` (pyyaml, CPU torch, diffusers, `diffusers-docs-mcp` PATH shim, MCP `--selftest`). `start`: re-run the shim only (snapshot boots skip `install`). Allowlist command: `diffusers-docs-mcp`. Declares the fork as a repo dependency. |
+| **The fork** | `overlay/environment.json` (copied to fork `.cursor/environment.json` by `make attach`) | Clones this kit to `ramp-kit/` if missing, then the same `cloud-install.sh`. `start` refreshes `diffusers-docs-mcp`. Fork `.cursor/mcp.json` is stdio `diffusers-docs` only (no Hub HTTP). |
 
 Dry-run locally (does not boot a Cloud VM):
 
