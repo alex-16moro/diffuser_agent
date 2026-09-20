@@ -5,9 +5,6 @@
 coding agent, the reviewer, PM, QA, and DevOps — across the full path a change
 takes: plan → design → build → review → test → deploy.**
 
-Built for the Solutions Architect technical screen. Everything here runs; there
-are no screenshots standing in for working software.
-
 **Two repos (both yours):** this overlay (`diffuser_agent`) plus a fork of the
 library ([alex-16moro/diffusers](https://github.com/alex-16moro/diffusers)).
 The live Cloud Agent demo launches **on the fork** after you show **this kit**.
@@ -19,7 +16,7 @@ PRs are titled `[fork demo — not for upstream]`. See `overlay/OVERLAY.md`.
 
 ---
 
-## The problem I chose to solve (and why it's the right one)
+## Framing the problem
 
 A convention-heavy library like `diffusers` already contains a lot of valuable
 engineering knowledge — but it's *distributed*: across the `.ai/` agent guidance,
@@ -28,24 +25,22 @@ it before they can ship a safe change (how a scheduler must be structured, which
 imports moved last release, what the reviewer will bounce), and they usually
 discover each rule the slow way: a red PR, a review round-trip, a broken build.
 
-So the goal isn't to write conventions the library lacks — it already ships an
+So the goal isn't to write conventions the library lacks, it already has an
 `.ai/` directory (`AGENTS.md`, `review-rules.md`, on-demand skills) for the agent
 and the reviewer. **The goal is to turn those scattered signals into one governed
 contribution workflow** that makes the path from task to review-ready change
 explicit, enforces it identically everywhere, and extends the value to the rest
 of the team — PM, QA, DevOps — which is the gap the customer named.
 
-So I didn't invent a parallel system. **I extended the maintainers' own pattern**
-with the one thing that makes conventions trustworthy end-to-end: a single
-machine-readable registry that every audience is *projected* from, plus a
+So **I extended the maintainers' own pattern** with the one thing that makes conventions trustworthy end-to-end: a single machine-readable registry that every audience is *projected* from, plus a
 runnable gate that enforces it identically in the editor, before the PR, and in
 CI. The registry separates **upstream conventions** ("what diffusers requires,"
 verified against source) from **customer guardrails** ("what our org adds"), so
 nobody confuses the two.
 
 **The business impact:** fewer review round-trips (the highest-cost, highest-
-latency step), consistent code from day one, and — because the rules are code,
-not tribal knowledge — the team owns and extends it without me (requirement 4).
+latency step), consistent code from day one, and because the rules are code,
+the team owns and extends it without me (requirement 4).
 
 ## The core idea: one source of truth, many audiences
 
@@ -69,7 +64,7 @@ gate **cannot disagree**, because they're the same source rendered five ways.
 
 ## The scaling model: fixed primitives, data-driven components
 
-The kit is a **small, fixed set of primitives** — it does *not* grow a bespoke
+The kit is a **small, fixed set of primitives**. It does *not* grow a bespoke
 approach per task type. New components (a model, a pipeline) and new mistakes are
 added as **data** (registry rows + a template file + docs), never as new
 machinery.
@@ -121,7 +116,7 @@ make grokbot ROLE=qa   # role briefing from sample gate JSON (does not gate)
 make grokbot-pack      # paste-ready Grok Bot iPhone/desktop profiles
 ```
 
-The 90-second demo (`make demo`) shows the whole arc:
+The 90-second demo (`make demo`) shows:
 
 1. A new engineer's first-cut scheduler (`examples/candidate_scheduler/`) — the
    gate catches **8 blocking + 2 warnings**, each with a rule id and a fix.
@@ -129,7 +124,7 @@ The 90-second demo (`make demo`) shows the whole arc:
    **0 findings**.
 3. The `diffusers-docs` MCP server answers a grounded query over the library's
    docs (newline-delimited JSON-RPC, the stdio framing Cursor uses).
-4. Contract tests — green, with numeric determinism skipped cleanly when torch
+4. Contract tests green, with numeric determinism skipped cleanly when torch
    isn't installed.
 
 The **contribution** walkthrough (`docs/LIVE_DEMO.md`, `make demo-contribute`)
