@@ -287,6 +287,40 @@ class TestGrokbotSim(unittest.TestCase):
         self.assertIn("Does not gate", out)
 
 
+class TestGrokbotIphonePack(unittest.TestCase):
+    def test_profiles_cover_three_roles_and_never_gate(self):
+        text = (ROOT / "agents" / "grokbot-profiles.md").read_text()
+        for needle in (
+            "Ramp Kit QA",
+            "Ramp Kit PM",
+            "Ramp Kit DevOps",
+            "never gate",
+            "never merge",
+            "Edit Profile",
+            "First iPhone message",
+        ):
+            self.assertIn(needle, text)
+        for role in ("qa", "pm", "devops"):
+            agent = ROOT / ".cursor" / "agents" / f"grokbot-{role}.md"
+            self.assertTrue(agent.is_file(), agent)
+            body = agent.read_text()
+            self.assertIn("readonly: true", body)
+            self.assertIn("never merge", body.lower())
+            self.assertIn(f"grokbot_sim.py --role {role}", body)
+
+    def test_grokbot_pack_prints_profiles(self):
+        proc = subprocess.run(
+            ["make", "grokbot-pack"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("Ramp Kit QA", proc.stdout)
+        self.assertIn("make grokbot-pack", proc.stdout)
+
+
 class TestSchedulerContractVerify(unittest.TestCase):
     def test_passes_against_fork_or_skips_kit_standin(self):
         proc = subprocess.run(
@@ -352,7 +386,7 @@ class TestProjectionDrift(unittest.TestCase):
                 text=True,
             )
             diff = subprocess.run(
-                ["git", "diff", "--exit-code", "--", ".cursor/rules", "AGENTS.md",
+                ["git", "diff", "--exit-code", "--", ".cursor/rules", ".cursor/agents", "AGENTS.md",
                  "projections", ".github/workflows", "agents"],
                 cwd=ROOT,
                 capture_output=True,
@@ -370,6 +404,8 @@ class TestProjectionDrift(unittest.TestCase):
             ROOT / "AGENTS.md",
             ROOT / "projections" / "pm" / "definition-of-done.md",
             ROOT / "agents" / "grokbot-qa.md",
+            ROOT / "agents" / "grokbot-profiles.md",
+            ROOT / ".cursor" / "agents" / "grokbot-qa.md",
         ]
         subprocess.run(
             [sys.executable, str(ROOT / "tools" / "build_projections.py")],

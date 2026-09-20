@@ -3,7 +3,8 @@
 Two parts: (A) the screen session, (B) the final-round role-play. Both assume
 you run the artifact **live**.
 
-**Sequence:** show **this kit** first, then switch to the **library fork**
+**Sequence:** open `docs/ramp-kit-briefing.html` if you want the deck first.
+Then show **this kit**, then switch to the **library fork**
 ([alex-16moro/diffusers](https://github.com/alex-16moro/diffusers)). Do not
 open on the fork until they have seen the registry and the gate.
 
@@ -44,7 +45,10 @@ open on the fork until they have seen the registry and the gate.
    Point at `DEPR001` (import moved) and `SCHED003` (no `@register_to_config`).
 2. "This is the overlay. It is not the library. The gate is
    `tools/convention_check.py`; the registry is `conventions/rules.yaml`."
-3. If the room is cold on Cursor: `make demo-contribute KEEP=1` as rehearsal.
+3. `make grokbot ROLE=qa`. If Grok Bot is on a phone in the room: paste the
+   QA block from `make grokbot-pack` (`docs/GROKBOT.md`). The app does not
+   import git; paste is the wiring.
+4. If the room is cold on Cursor: `make demo-contribute KEEP=1` as rehearsal.
    Otherwise save the files-on-disk beat for the fork.
 
 **12–22 min · the fork (real library).** Launch / paste Prompt A on

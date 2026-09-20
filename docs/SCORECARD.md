@@ -9,19 +9,21 @@ missing. Cosmetic means it only restates the same facts in another file.
 | 2 | Catch mistakes early; strengthen tests (deprecated APIs, anti-patterns, **missing or weak tests**) | **MET** | Existing gate (DEPR001, DEVICE001, MUT001, TEST001). **TEST002** (`test_adequacy`): empty `test_*` functions, same-seed determinism, shape **and** dtype. Verify: zero-assertion tempfile is flagged; `examples/scaffolded_scheduler` is 0 findings. | Load-bearing: TEST002 is `severity: block`. |
 | 3 | Fit CI; stay in approved context boundaries | **MET** | `.github/workflows/convention-gate.yml` (generated) now includes **projection drift** (`build_projections.py && git diff --exit-code`) and **contract re-verify**. `.cursorignore` hides the known-bad fixture. Overlay `mcp.json` is `{ "mcpServers": {} }`; attach copies it. Gate on the fork is file-scoped — never `--all` on the library tree. | Load-bearing: drift job is red on hand-edited generated files; empty MCP is the Cloud-safe default. |
 | 4 | Maintainable without the author | **MET** | `owner` on every rule; `make build` / `make demo-maintain`; `tools/verify_scheduler_contract.py` checks fork reference source vs SCHED001–003 (passes today; renamed `set_timesteps` reports DRIFT). Adding a component remains registry + template, not new machinery. | Load-bearing: missing `owner` or unimplemented `check` fails `build_projections.py`. |
-| 5 | One solution, multiple audiences (PM, QA, DevOps) | **MET** | Not “the same bullets pasted three times.” **`owner` tags** split the registry by role. Projections group/label by owner. **GrokBot** specs (`agents/grokbot-{pm,qa,devops}.md`) are generated from those tags. `tools/grokbot_sim.py --role qa` prints a **risk briefing** from gate JSON and never gates. | Load-bearing for the multi-audience claim: owner field + role sim. Spec files without the sim would have been cosmetic. |
+| 5 | One solution, multiple audiences (PM, QA, DevOps) | **MET** | Not “the same bullets pasted three times.” **`owner` tags** split the registry by role. Projections group/label by owner. **GrokBot** specs (`agents/grokbot-{pm,qa,devops}.md`) plus **paste-ready iPhone/desktop profiles** (`agents/grokbot-profiles.md`, `make grokbot-pack`) are generated from those tags. Cursor subagents live at `.cursor/agents/grokbot-*.md` if Grok Bot spawns a Cloud Agent. `tools/grokbot_sim.py --role qa` prints a **risk briefing** from gate JSON and never gates. iOS steps: `docs/GROKBOT.md`. | Load-bearing for the multi-audience claim: owner field + role sim + generated app profiles. Spec files without the sim would have been cosmetic. |
 
 ## Self-score
 
-**4.4 / 5** as a screen artifact. All five requirements have a runnable verify.
-I do not claim production GrokBot integrations, Hugging Face CI green on a
-fork demo, or numerical correctness of `step()`.
+**4.5 / 5** as a screen artifact. All five requirements have a runnable verify.
+I do not claim Bots auto-appear in the iPhone app (no create-from-git API),
+Hugging Face CI green on a fork demo, or numerical correctness of `step()`.
 
 ## Where it breaks
 
 - **Structure, not math.** A scheduler that matches the interface and computes
   nonsense still passes. QA checklist says so; TEST002 does not change that.
-- **GrokBot is a simulation.** It will not page a human or comment on a PR.
+- **Grok Bot app does not import git.** Paste `make grokbot-pack` into Edit
+  Profile. `grokbot_sim.py` is still the reproducible briefing; it will not
+  page a human or comment on a PR.
 - **Contract re-verify SKIPs** if the library fork is not attached (kit-only
   clone). Adjacent checkout or `--library` is required for a real pass.
 - **`applies_to` globs are heuristic.** A scheduler in a weird path can miss

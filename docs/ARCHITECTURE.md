@@ -20,7 +20,8 @@ validator catches drift, instead of trusting docs or memory.
 ```
 rules.yaml ──build_projections.py──> agent rules, AGENTS.md, PM DoD,
      │                                QA checklist, DevOps CI gate,
-     │                                GrokBot specs (read-side, never gate)
+     │                                GrokBot specs + iPhone profiles (read-side, never gate)
+     │                                Cursor subagents (`.cursor/agents/grokbot-*.md`)
      └────────convention_check.py───> the runnable gate (editor / pre-PR / CI)
 ```
 
@@ -28,7 +29,8 @@ rules.yaml ──build_projections.py──> agent rules, AGENTS.md, PM DoD,
 implemented in `convention_check.py`, or if a rule is missing a valid `owner`
 (`dev` / `architect` / `qa` / `pm` / `devops`). Owner tags are the
 multi-audience mechanism: roles co-author one registry; GrokBot translates
-gate JSON for a role. CI also rebuilds projections and `git diff --exit-code`
+gate JSON for a role (CLI sim, or paste-ready profiles in the iPhone Grok Bot
+app). CI also rebuilds projections and `git diff --exit-code`
 (hand-edits of generated files fail) and re-verifies SCHED001–003 against
 fork source (`tools/verify_scheduler_contract.py`).
 

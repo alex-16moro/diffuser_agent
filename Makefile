@@ -3,7 +3,7 @@
 
 PYTHON ?= python3
 
-.PHONY: help doctor build check check-json test mcp demo demo-contribute demo-contribute-clean demo-maintain grokbot verify-contract drift attach clean
+.PHONY: help doctor build check check-json test mcp demo demo-contribute demo-contribute-clean demo-maintain grokbot grokbot-pack verify-contract drift attach clean
 
 help:
 	@echo "diffusers Ramp Kit"
@@ -18,6 +18,7 @@ help:
 	@echo "  make demo-contribute-clean  Remove the EulerLite contribution files"
 	@echo "  make demo-maintain  Prove req #4: add a rule, rebuild, watch it propagate"
 	@echo "  make grokbot    Simulate a GrokBot role briefing from sample gate JSON (ROLE=qa)"
+	@echo "  make grokbot-pack  Print paste-ready Grok Bot iPhone/desktop profiles"
 	@echo "  make verify-contract  Re-check SCHED001-003 against fork reference source"
 	@echo "  make drift      Rebuild projections and fail if generated files were hand-edited"
 	@echo "  make attach     Copy overlay Cursor files into a diffusers checkout (TARGET=../diffusers)"
@@ -40,6 +41,7 @@ doctor:
 		|| (echo "overlay/mcp.optional.json must list opt-in servers"; exit 1)
 	@$(PYTHON) tools/docs_mcp_server.py --selftest >/dev/null
 	@test -f tools/grokbot_sim.py && test -f tools/verify_scheduler_contract.py \
+		&& test -f agents/grokbot-profiles.md && test -f .cursor/agents/grokbot-qa.md \
 		|| (echo "Missing GrokBot / contract-verify tooling"; exit 1)
 	@echo "doctor OK: $(PYTHON) + PyYAML + Cursor files + MCP self-test + overlay"
 
@@ -59,12 +61,16 @@ grokbot:
 	@$(PYTHON) tools/convention_check.py --json examples/candidate_scheduler > /tmp/ramp-kit-gate.json || true
 	$(PYTHON) tools/grokbot_sim.py --role $(or $(ROLE),qa) /tmp/ramp-kit-gate.json
 
+grokbot-pack:
+	@test -f agents/grokbot-profiles.md || $(PYTHON) tools/build_projections.py
+	@cat agents/grokbot-profiles.md
+
 verify-contract:
 	$(PYTHON) tools/verify_scheduler_contract.py $(if $(LIBRARY),--library $(LIBRARY),)
 
 drift:
 	$(PYTHON) tools/build_projections.py
-	git diff --exit-code -- .cursor/rules AGENTS.md projections .github/workflows \
+	git diff --exit-code -- .cursor/rules .cursor/agents AGENTS.md projections .github/workflows \
 		.github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE agents
 
 test:
@@ -108,12 +114,12 @@ demo-maintain:
 	@echo "\nRegenerating all surfaces from the one edit ..."
 	@$(PYTHON) tools/build_projections.py >/dev/null
 	@echo "\nSurfaces that changed from a SINGLE registry edit:"
-	@git status --short .cursor/rules AGENTS.md projections conventions/rules.yaml \
+	@git status --short .cursor/rules .cursor/agents AGENTS.md projections conventions/rules.yaml \
 		.github/workflows .github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE agents || true
 	@echo "\nRestoring original state ..."
 	@git checkout -- conventions/rules.yaml .cursor/rules AGENTS.md projections \
 		.github/workflows .github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE
-	@git checkout -- agents 2>/dev/null || true
+	@git checkout -- agents .cursor/agents 2>/dev/null || true
 	@$(PYTHON) tools/build_projections.py >/dev/null
 	@echo "Done. One edit -> agent rules + AGENTS.md + PM DoD + QA + CI all updated."
 

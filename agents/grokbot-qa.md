@@ -2,8 +2,11 @@
 
 # GrokBot QA — QA risk briefing
 
-> **Simulation / read-side view.** This agent TRANSLATES gate and CI
-> output. It never decides, never fails a job, never merges.
+> **Read-side view.** This agent TRANSLATES gate and CI output.
+> It never decides, never fails a job, never merges.
+> iPhone / desktop Grok Bot: paste the matching block in
+> `agents/grokbot-profiles.md` (see `docs/GROKBOT.md`).
+> The reproducible briefing remains `tools/grokbot_sim.py`.
 
 ## Job
 Turn the gate/CI output for this change into a risk briefing: what is machine-blocked, what tests are weak, what still needs a human.
@@ -26,9 +29,15 @@ Presence of a test file is not enough. A test_* function with zero assertions is
 - Review: Does the scheduler test assert determinism and shape/dtype, with no empty test functions?
 - Done: Scheduler tests have assertions, including same-seed determinism and shape/dtype.
 
-## How to run the simulation
+## How to run the briefing (CLI, reproducible)
 
 ```bash
 python tools/convention_check.py --json examples/candidate_scheduler > /tmp/gate.json || true
 python tools/grokbot_sim.py --role qa < /tmp/gate.json
 ```
+
+## Grok Bot app (iPhone / desktop)
+
+Create a Bot named **Ramp Kit QA**, title **Risk briefing**.
+Paste the Description + first message from `agents/grokbot-profiles.md`.
+The app does not import this file from git — paste is the wiring.

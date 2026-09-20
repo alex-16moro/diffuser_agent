@@ -116,7 +116,7 @@
   .tbl-wrap{overflow-x:auto}
 
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1.5rem}
-  @media (max-width:680px){ .grid2{grid-template-columns:1fr} }
+  @media (max-width:680px){ .grid2{grid-template-columns:1fr !important} }
   .tile{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; box-shadow:var(--shadow)}
   .tile .lever{font-weight:700; font-size:1.05rem; letter-spacing:-.01em; display:flex; align-items:center; gap:.5rem}
   .tile .lever .dn{color:var(--good); font-family:"IBM Plex Mono",monospace; font-size:.85rem; border:1px solid color-mix(in srgb, var(--good) 40%, transparent); border-radius:6px; padding:.05rem .4rem}
@@ -177,6 +177,7 @@
       <div class="chips">
         <span class="chip">Runs offline</span>
         <span class="chip">Overlay on a real fork</span>
+        <span class="chip">Grok Bot on iPhone</span>
         <span class="chip">huggingface/diffusers · stand-in</span>
       </div>
     </div>
@@ -225,7 +226,7 @@
             <div class="nt">build_projections.py</div>
             <div class="nd">renders every audience surface</div>
             <div class="surfaces">
-              <span>agent rules</span><span>AGENTS.md</span><span>PM DoD</span><span>QA checklist</span><span>CI YAML</span><span>GrokBot specs</span>
+              <span>agent rules</span><span>AGENTS.md</span><span>PM DoD</span><span>QA checklist</span><span>CI YAML</span><span>GrokBot profiles</span>
             </div>
           </div>
           <div class="node">
@@ -247,7 +248,7 @@
       <div class="role-row"><div class="r">qa</div><div class="j">Is the risk covered?</div><div class="v">Test-adequacy gates + a risk briefing: what's enforced vs the unverified surface (the math).</div></div>
       <div class="role-row"><div class="r">pm</div><div class="j">In scope, on track?</div><div class="v">A live Definition of Done — the exact checks CI will run, not a printed list.</div></div>
       <div class="role-row"><div class="r">devops</div><div class="j">Moves safely to release?</div><div class="v">A GPU-less CI job, drift detection, and contract re-verification.</div></div>
-      <p class="note"><strong>GrokBot</strong> agents are the read-side: generated from the same registry, they translate gate output for a role — and never gate. Multiplicity of <em>readers</em>, one source of truth.</p>
+      <p class="note"><strong>Grok Bot</strong> on iPhone is the same read-side: paste generated profiles into the app. They translate gate output for a role — and never gate. Multiplicity of <em>readers</em>, one source of truth.</p>
     </div>
   </section>
 
@@ -263,7 +264,7 @@
           <tr><td class="chose">Registry + AST gate</td><td class="over">A bot that "knows" the conventions</td><td>Memory and docs drift; source plus a validator do not.</td></tr>
           <tr><td class="chose">Empty default MCP</td><td class="over">Hub HTTP / stdio at launch</td><td>An OAuth or cwd failure in a 45-minute demo is unrecoverable.</td></tr>
           <tr><td class="chose">Scaffold the contract</td><td class="over">Inventing the sampler math</td><td>Fake numerics pass the gate and fail the reviewer.</td></tr>
-          <tr><td class="chose">Owner tags + GrokBot sim</td><td class="over">A bot per SDLC stage</td><td>One truth; multiple readers are fine, multiple truths aren't.</td></tr>
+          <tr><td class="chose">Owner tags + GrokBot profiles</td><td class="over">A bot per SDLC stage</td><td>One truth; the iPhone app pastes generated profiles. Multiple readers are fine, multiple truths aren't.</td></tr>
           <tr><td class="chose">Stop at CI clearance</td><td class="over">A fake deploy</td><td>No customer env or auth model. Green gate = merge-eligible.</td></tr>
         </tbody>
       </table>
@@ -305,14 +306,37 @@
     </div>
   </section>
 
-  <!-- 9 · NEXT + CLOSE -->
+  <!-- 9 · GROK BOT IPHONE -->
+  <section class="slide" hidden aria-label="Grok Bot on iPhone">
+    <div class="inner">
+      <p class="eyebrow">08 — Grok Bot on your phone</p>
+      <h2>Same registry. Three Bots. Paste, don't provision from git.</h2>
+      <div class="grid2" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="tile">
+          <div class="lever">Ramp Kit QA</div>
+          <p>Risk briefing. Owned: TEST001, TEST002. Paste Name / Title / Description from <code>make grokbot-pack</code>.</p>
+        </div>
+        <div class="tile">
+          <div class="lever">Ramp Kit PM</div>
+          <p>Status digest. Owned: DOC001. Same Cursor account as this kit. App Store app is <strong>Grok Bot</strong>, not Cursor for iOS.</p>
+        </div>
+        <div class="tile">
+          <div class="lever">Ramp Kit DevOps</div>
+          <p>Health signal. Owned: DEVICE001, LOG001, CUST001. Standing order: translate gate JSON — never gate, never merge.</p>
+        </div>
+      </div>
+      <p class="note">The iPhone app has no create-from-git API. Profiles are generated from <code>owner:</code> tags. CLI briefing stays <code>tools/grokbot_sim.py</code>. Steps: <code>docs/GROKBOT.md</code>.</p>
+    </div>
+  </section>
+
+  <!-- 10 · NEXT + CLOSE -->
   <section class="slide" hidden aria-label="Next steps">
     <div class="inner">
-      <p class="eyebrow">08 — Owned by the team, not by me</p>
+      <p class="eyebrow">09 — Owned by the team, not by me</p>
       <ul class="pts">
         <li>A new component (<code>model</code>, <code>pipeline</code>) = registry rows + a template. No new machinery.</li>
         <li>Drift detection + contract re-verification keep it honest as the library evolves.</li>
-        <li>GrokBot read-views per role; mechanical auto-fix later — never on numerics.</li>
+        <li>Grok Bot on iPhone: re-paste profiles after <code>make build</code>. Mechanical auto-fix later — never on numerics.</li>
       </ul>
       <p class="closer">First PRs fail on the <em>math</em> — the reviewer's job — not on a missing <code>SchedulerMixin</code>.</p>
     </div>
@@ -324,7 +348,7 @@
   <button class="nbtn" id="prev" aria-label="Previous slide">← Prev</button>
   <div class="dots" id="dots" role="tablist" aria-label="Slides"></div>
   <span class="hint">← → to move</span>
-  <span class="counter" id="counter">1 / 9</span>
+  <span class="counter" id="counter">1 / 10</span>
   <button class="nbtn" id="next" aria-label="Next slide">Next →</button>
   <button class="nbtn" id="theme" aria-label="Toggle theme" title="Toggle light / dark">◐</button>
 </nav>

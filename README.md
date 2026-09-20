@@ -96,7 +96,7 @@ as it grows.
 | 2 | Catch mistakes early, strengthen tests | `tools/convention_check.py` (AST + regex) including **TEST002** weak-test / determinism / shape-dtype; in-editor hook; GrokBot QA sim reads `--json` |
 | 3 | Fit CI, stay in approved boundaries | Generated `.github/workflows/convention-gate.yml`: same gate + **projection drift** + **contract re-verify** + tests. `.cursorignore`. Overlay MCP empty by default. File-scoped on the fork. |
 | 4 | Stay maintainable as the library evolves | One `rules.yaml` with `owner:` tags; `make build` / `make demo-maintain`; `verify_scheduler_contract.py` vs fork source; build fails if a check or owner is missing |
-| 5 | Work for PM, QA, DevOps too | Same registry. Projections **group by owner**. GrokBot specs generated per around-engineering role; `grokbot_sim.py --role qa` is a simulation, not a second gate |
+| 5 | Work for PM, QA, DevOps too | Same registry. Projections **group by owner**. GrokBot specs + iPhone/desktop profiles generated per around-engineering role; `grokbot_sim.py --role qa` is the reproducible briefing, not a second gate. Paste pack: `make grokbot-pack` / `docs/GROKBOT.md` |
 
 Built for **Cursor**: rules (`.cursor/rules/*.mdc`), a command
 (`.cursor/commands/scaffold.md`), an edit hook (`.cursor/hooks.json`), an MCP
@@ -117,6 +117,8 @@ make check      # run the gate on the whole repo (exit code = # blocking)
 make test       # contract tests — zero third-party installs needed
 make mcp        # self-test the diffusers-docs MCP server (Content-Length handshake)
 make demo-maintain     # add a rule, rebuild, watch it propagate to every surface (req #4)
+make grokbot ROLE=qa   # role briefing from sample gate JSON (does not gate)
+make grokbot-pack      # paste-ready Grok Bot iPhone/desktop profiles
 ```
 
 The 90-second demo (`make demo`) shows the whole arc:
@@ -209,7 +211,12 @@ tests/                          contract tests + template
 .github/ISSUE_TEMPLATE/         PM planning surface (generated)
 .github/PULL_REQUEST_TEMPLATE.md
 projections/{pm,qa,devops}/     the multi-audience surfaces (generated)
-docs/ARCHITECTURE.md            design choices + trade-offs
+agents/grokbot-*.md             GrokBot specs (generated; read-side)
+agents/grokbot-profiles.md      paste pack for the iPhone/desktop Grok Bot app
+.cursor/agents/grokbot-*.md     Cursor subagents if Grok Bot spawns a Cloud Agent
+docs/ramp-kit-briefing.html     slide deck for the screen
+docs/GROKBOT.md                 wire generated profiles into the iPhone Grok Bot app
 docs/LIVE_DEMO.md              timed contribution walkthrough (Cursor + CLI)
 docs/TALK_TRACK.md              the 45-min session + stakeholder defense
+docs/ARCHITECTURE.md            design choices + trade-offs
 ```

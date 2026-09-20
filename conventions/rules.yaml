@@ -7,6 +7,8 @@
 #   - AGENTS.md                         (tool-agnostic: Codex, Claude Code, etc.)
 #   - tools/convention_check.py         (the runnable gate — CI + pre-PR + editor)
 #   - projections/pm|qa|devops/         (PM DoD, QA checklist, CI gate)
+#   - agents/grokbot-*.md + grokbot-profiles.md  (Grok Bot specs + iPhone paste pack)
+#   - .cursor/agents/grokbot-*.md (Cursor subagents if Grok Bot spawns a Cloud Agent)
 #
 # TWO KINDS OF RULE (this is the enterprise distinction):
 #   source_type: upstream  -> "This is what diffusers itself requires." Verified

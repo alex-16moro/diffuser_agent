@@ -80,6 +80,11 @@ GrokBot prints a **QA risk briefing** labelled SIMULATION. It does not gate.
 Contract re-verify must say `scheduler contract OK` against this checkout's
 `scheduling_ddpm.py` / `scheduling_euler_discrete.py`.
 
+Optional 2-minute add-on if Grok Bot is on a phone in the room: open
+`docs/GROKBOT.md`, paste the **Ramp Kit QA** block from `make grokbot-pack`
+into **Edit Profile**, send the first message. The Bot is a reader of the
+same gate JSON you just produced.
+
 If they ask for a docs search without MCP:
 
 ```bash
@@ -100,6 +105,7 @@ make demo                    # catch-early, scaffolded 0 findings, MCP, tests, G
 make demo-contribute KEEP=1  # leaves EulerLite on disk
 # walk the printed steps with them
 make grokbot ROLE=qa         # same sim from candidate_scheduler --json
+make grokbot-pack            # paste-ready iPhone / desktop Grok Bot profiles
 make drift                   # rebuild projections; git diff --exit-code (must be clean)
 make verify-contract         # SCHED001-003 vs fork source
 make demo-contribute-clean   # remove when done
@@ -113,7 +119,8 @@ Default `make demo-contribute` **creates, proves, and deletes** (safe to run in 
 
 - **0–5** problem (distributed conventions → review round-trips)
 - **5–8** `rules.yaml` → many surfaces, including `owner:` tags (**not** a tool per SDLC step)
-- **8–12** **kit**: catch the bad fixture; `make grokbot ROLE=qa` (simulation)
+- **8–12** **kit**: catch the bad fixture; `make grokbot ROLE=qa` (simulation).
+  If a phone is in the room, paste QA from `make grokbot-pack` (see `docs/GROKBOT.md`).
 - **12–22** **fork**: source-ground → scaffold → file-scoped green gate
 - **22–30** QA + issue template + overlay CI (drift + contract re-verify) vs inherited HF Actions
 - **30–38** judgment (schedulers first, empty default MCP, no embeddings, no auto-fix, stop at CI)
