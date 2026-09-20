@@ -17,8 +17,15 @@ python tools/convention_check.py --all   # human-readable, sets exit code
 - `--json` output is stable for dashboards / PR annotations.
 - No GPU, no model downloads, no network — runs on the cheapest runner.
 - Same script runs in the editor hook and pre-PR, so CI surprises are rare.
-- Green gate = merge-eligible (release clearance). This kit does not
-  deploy; it is the check that a change is allowed to move toward release.
+- Green gate = merge-eligible. Packaging is a separate BUILD-VERIFIED /
+  PACKAGING-ELIGIBLE check (`tools/release_check.py`) that runs only on a
+  library checkout: pytest tests/others/test_dependencies.py, `python -m build
+  --wheel`, then import the new export from the installed wheel with
+  PYTHONPATH stripped (site-packages, not src/). Same spirit as
+  overlay_pr_gate.py — invoke the team's tooling; not a new product.
+  GrokBot DevOps reads that JSON via `--release-json`; it does not run
+  `python -m build`. Stops at build-verified. Handoff: customer index,
+  creds, and tag. Not CD. Not a required GitHub check on first-contribution PRs.
 - **Projection drift:** `python tools/build_projections.py && git diff --exit-code`
   fails if a generated surface was hand-edited instead of `rules.yaml`.
 - **Scheduler contract re-verify:** `python tools/verify_scheduler_contract.py`
