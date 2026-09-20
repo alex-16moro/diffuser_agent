@@ -5,74 +5,51 @@ Usage: `/scaffold <component> <Name>`
 - `$1` = component. Today the registry ships `scheduler`. Adding `model` or `pipeline` is a data change (see `templates/README.md`), not a new command.
 - `$2` = PascalCase name **without** the type suffix. Example: `EulerLite` → class `EulerLiteScheduler`, file `scheduling_euler_lite.py`.
 
-Follow this workflow in order. Do **not** rely on training memory for how diffusers works — this repo's registry and docs are the source of truth.
+Done is only what `conventions/rules.yaml` checks. Copy the templates. Do not
+start from a blank file, from library scheduler source, or from a docs search.
 
-## 0. Ground first
+## 0. Ground in the registry
 
-Call the `diffusers-docs` MCP tool `search_docs` for the component contract (for a scheduler: `set_timesteps`, `step`, `SchedulerMixin`, `@register_to_config`).
+Read `conventions/rules.yaml`. Blocking ids for this contribution: SCHED001,
+SCHED002, SCHED003, REPRO001, DEVICE001, DEPR001, MUT001, TEST001, TEST002.
 
-If `search_docs` is **not listed in your tools** (typical for Cloud Agents unless the MCP dropdown is stdio `python3 -u .cursor/mcp-diffusers-docs.py`, with **no** `cwd` / `${workspaceFolder}`), use `/search-docs`, the `search-docs` skill, or:
-
-```bash
-python3 tools/docs_mcp_server.py --query "scheduler set_timesteps step SchedulerMixin register_to_config"
-```
-
-That is the same process as the MCP server. Cite provenance. If snippets miss the contract, read `conventions/rules.yaml` — the gate is authoritative.
-
-Stay inside `.cursorignore`. Do not read or copy `examples/candidate_scheduler/` (it is the known-bad fixture).
+The templates already satisfy them. Stay inside `.cursorignore`. Do not read or
+copy `examples/candidate_scheduler/` (known-bad fixture).
 
 ## 1. Name the files
 
-For `scheduler` + `$2` = `EulerLite`:
+Convert `$2` to snake_case (`EulerLite` → `euler_lite`). The class is `$2Scheduler`.
 
-- Implementation: `src/diffusers/schedulers/scheduling_euler_lite.py`
-- Test: `tests/schedulers/test_scheduling_euler_lite.py`
+- Implementation: `src/diffusers/schedulers/scheduling_<snake>.py`
+- Test: `tests/schedulers/test_scheduling_<snake>.py`
 
-Convert `$2` to snake_case for the filename (`EulerLite` → `euler_lite`). The class is `$2Scheduler`.
-
-This stand-in repo uses a thin `src/diffusers/schedulers/` tree so the path matches the real library. It is not a full diffusers checkout.
+This stand-in repo uses a thin `src/diffusers/schedulers/` tree so the path
+matches the real library. It is not a full diffusers checkout.
 
 ## 2. Copy the template, then rename
 
 - Start from `templates/scheduler/scheduling_TEMPLATE.py`. Copy it to the implementation path.
 - Rename `TemplateScheduler` to `$2Scheduler`.
-- Leave the numerical update in `step` as a clearly marked `TODO(engineer)`. Scaffold the **contract**, not the algorithm. Do not invent a sampler.
+- Keep `TODO(engineer)` in `step()`. Do not replace the placeholder.
 
-## 3. Add the contract test (TEST001)
+## 3. Copy the contract test (TEST001 / TEST002)
 
-Copy `tests/_templates/scheduler_test.py` to the test path. Set:
+Copy `tests/_templates/scheduler_test.py` to the test path. Set `TARGET` and
+`CLASS` only.
 
-- `TARGET` to the new implementation file
-- `CLASS` to `$2Scheduler`
-
-Do not delete the signature or behavioral test classes — presence of a file is not enough; the test must mention `set_timesteps` and `step`.
-
-## 4. Satisfy every `component: scheduler` (and `component: any`) rule
-
-Read `conventions/rules.yaml`. Blocking rules must pass:
-
-- SCHED001 SchedulerMixin + ConfigMixin
-- SCHED002 `set_timesteps` and `step`
-- SCHED003 `@register_to_config` on `__init__`
-- REPRO001 thread `generator=` through sampling
-- DEVICE001 no hardcoded `.cuda()`
-- DEPR001 current import paths
-- MUT001 no mutable defaults
-- TEST001 matching test that exercises the contract
-- TEST002 assertions + same-seed determinism + shape/dtype
-
-## 5. Run the gate until clean
+## 4. File-scoped gate
 
 ```bash
 python3 tools/convention_check.py src/diffusers/schedulers/scheduling_<snake>.py
-python3 -m unittest discover -s tests -t . -v
+python3 -m unittest tests.schedulers.test_scheduling_<snake> -v
 ```
 
-Fix every **blocking** finding. Stop at 0 blocking. Do not fabricate numerical behaviour to make behavioral tests pass — those skip without torch, which is expected.
+Fix every **blocking** finding. Stop at 0 blocking. Behavioral tests skip
+without torch — do not edit `step()` to make them pass.
 
-## 6. Report
+## 5. Report
 
-- Rule ids satisfied
-- What you grounded via MCP (or the fallback docs)
-- What the engineer still implements (the math)
-- Confirmation you did not read paths in `.cursorignore`
+- Blocking rule ids the gate checked
+- 0 blocking
+- `TODO(engineer)` still in `step()`
+- Confirmation you added only those two files

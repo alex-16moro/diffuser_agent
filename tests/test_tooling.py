@@ -567,6 +567,11 @@ class TestAttachEmptyMcp(unittest.TestCase):
             self.assertNotIn("convention_check.py --all", wf)
             self.assertIn("Never convention_check --all", wf)
             self.assertTrue((fake / ".github" / "scripts" / "overlay_pr_gate.py").is_file())
+            scaffold = (fake / ".cursor" / "commands" / "scaffold.md").read_text()
+            self.assertIn("rules.yaml", scaffold)
+            self.assertIn("scheduling_TEMPLATE.py", scaffold)
+            self.assertNotIn("docs_mcp_server.py", scaffold)
+            self.assertNotIn("Those files are the contract", scaffold)
 
     def test_attach_does_not_delete_inherited_workflows(self):
         with tempfile.TemporaryDirectory() as td:
@@ -587,6 +592,40 @@ class TestAttachEmptyMcp(unittest.TestCase):
             self.assertTrue(inherited.is_file())
             self.assertEqual(inherited.read_text(), "name: inherited\n")
             self.assertTrue((fake / ".github" / "workflows" / "ramp-kit-overlay.yml").is_file())
+
+
+class TestEngineerPromptScope(unittest.TestCase):
+    """Prompt A must not send the engineer into work the registry does not check."""
+
+    def _fork_prompt_a_paste(self) -> str:
+        text = (ROOT / "docs" / "CURSOR_PROMPTS.md").read_text()
+        start = text.index("## Prompt A — first contribution")
+        rest = text[start:]
+        fence = rest.index("```\n") + 4
+        end = rest.index("\n```", fence)
+        return rest[fence:end]
+
+    def test_prompt_a_stays_inside_registry_checked_files(self):
+        paste = self._fork_prompt_a_paste()
+        self.assertIn("conventions/rules.yaml", paste)
+        self.assertIn("scheduling_heun_lite.py", paste)
+        self.assertIn("test_scheduling_heun_lite.py", paste)
+        self.assertIn("TODO(engineer)", paste)
+        self.assertIn("scheduling_TEMPLATE.py", paste)
+        self.assertNotIn("scheduling_euler_discrete.py", paste)
+        self.assertNotIn("scheduling_ddpm.py", paste)
+        self.assertNotIn("docs_mcp_server.py", paste)
+        self.assertNotIn("docs/source", paste)
+        self.assertNotIn("search_docs", paste)
+        self.assertNotIn("grokbot_sim", paste)
+
+    def test_overlay_scaffold_copies_templates_not_library_source(self):
+        text = (ROOT / "overlay" / "scaffold.md").read_text()
+        self.assertIn("rules.yaml", text)
+        self.assertIn("scheduling_TEMPLATE.py", text)
+        self.assertNotIn("Those files are the contract", text)
+        self.assertNotIn("docs_mcp_server.py", text)
+        self.assertNotIn("scheduling_euler_discrete.py", text)
 
 
 class TestOverlayPrGate(unittest.TestCase):

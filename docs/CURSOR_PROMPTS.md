@@ -8,8 +8,9 @@ before launching a Cloud Agent. **Primary live write:** Cloud Agent on
 **Runbook:** `docs/LIVE_DEMO.md`.
 
 Default overlay MCP is **empty**. Do not paste Hub HTTP or stdio MCP into the
-Cloud launch for this demo. Grounding is the two scheduler source files, then
-the file-scoped gate. Opt-in servers live in `overlay/mcp.optional.json`.
+Cloud launch for this demo. The engineer copies overlay templates and runs the
+file-scoped gate — not library source, not docs search. Opt-in servers live in
+`overlay/mcp.optional.json`.
 
 ---
 
@@ -23,59 +24,39 @@ MCP **off**. The draft PR **base must be `main`** so overlay CI
 `EulerLiteScheduler` is already on fork `main`. This prompt scaffolds **HeunLite**.
 
 ```
-You just joined. This is your first contribution on this huggingface/diffusers FORK (alex-16moro/diffusers). Customer overlay: ramp-kit/ (from alex-16moro/diffuser_agent). Conventions are code, not memory.
+You just joined. First contribution on this huggingface/diffusers FORK (alex-16moro/diffusers). Overlay: ramp-kit/ (from alex-16moro/diffuser_agent).
 
-Handoff: opening a draft PR against main is the job. Do not write PM/QA/DevOps briefings. Do not run grokbot_sim.py. Do not @ anyone.
-
-Hard nos:
-- PR this fork only, never huggingface/diffusers.
-- Draft PR, base = main (not a cursor/* topic branch). Title starts with [fork demo — not for upstream].
-- Two files only: the new scheduler + its test. No __init__ export, no dummy object, no docs, no extra commits.
-- Leave TODO(engineer) in step(). Do not invent sampler math.
-- Never convention_check.py --all. File-scope only.
-- Do not overwrite .ai/ or root AGENTS.md. Do not delete inherited .github/workflows.
-- Do not copy ramp-kit/examples/candidate_scheduler/ into the new files.
+Done is only what ramp-kit/conventions/rules.yaml checks. The templates already pass those checks. Copy them. Do not design a scheduler.
 
 If ramp-kit/ is missing:
   git clone --depth 1 https://github.com/alex-16moro/diffuser_agent.git ramp-kit
 
-Grounding, in this order, before writing files:
-1. Read src/diffusers/schedulers/scheduling_euler_discrete.py and scheduling_ddpm.py.
-   Contract: set_timesteps + step, SchedulerMixin + ConfigMixin, @register_to_config. Not set_num_inference_steps.
-2. Treat ramp-kit/conventions/rules.yaml / the gate as authoritative if anything disagrees.
-3. Optional: python3 ramp-kit/tools/docs_mcp_server.py --query "scheduler set_timesteps step SchedulerMixin register_to_config"
-   Do not wait for an MCP tool.
+Scope — create exactly these two files, then stop:
+- src/diffusers/schedulers/scheduling_heun_lite.py
+- tests/schedulers/test_scheduling_heun_lite.py
 
-Do these steps in order and narrate them:
+Do this:
 
-1. Catch-early:
-   python3 ramp-kit/tools/convention_check.py ramp-kit/examples/candidate_scheduler
-   Summarise blocking rule ids. Do not copy that fixture.
+1. Read ramp-kit/conventions/rules.yaml. Blocking ids for this change: SCHED001, SCHED002, SCHED003, REPRO001, DEVICE001, DEPR001, MUT001, TEST001, TEST002.
 
-2. Scaffold HeunLiteScheduler (EulerLite already exists — do not touch it):
-   Prefer /scaffold scheduler HeunLite if that command exists.
-   Else copy:
-     ramp-kit/templates/scheduler/scheduling_TEMPLATE.py
-       → src/diffusers/schedulers/scheduling_heun_lite.py
-     ramp-kit/tests/_templates/scheduler_test.py
-       → tests/schedulers/test_scheduling_heun_lite.py
-   Class HeunLiteScheduler. Test must mention set_timesteps and step, plus assertions / same-seed determinism / shape+dtype.
-   Leave TODO(engineer) in step(). Do not invent Heun math.
+2. Copy ramp-kit/templates/scheduler/scheduling_TEMPLATE.py → src/diffusers/schedulers/scheduling_heun_lite.py
+   Rename TemplateScheduler → HeunLiteScheduler. Keep TODO(engineer) in step().
 
-3. Gate the NEW file only:
-   python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_heun_lite.py
-   Fix every BLOCKING finding until 0 findings.
+3. Copy ramp-kit/tests/_templates/scheduler_test.py → tests/schedulers/test_scheduling_heun_lite.py
+   Set TARGET and CLASS only.
 
-4. python3 -m unittest tests.schedulers.test_scheduling_heun_lite -v
-   Signature/structural tests must pass. Behavioral skips without torch are expected.
+4. python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_heun_lite.py
+   Fix blocking findings only. Stop at 0 blocking. Never convention_check.py --all.
 
-5. Open a DRAFT PR on alex-16moro/diffusers, base main, only those two files.
+5. python3 -m unittest tests.schedulers.test_scheduling_heun_lite -v
+   Structural/signature must pass. Skips without torch are success — do not edit step() to make behavioral tests pass.
+
+6. Draft PR on this fork, base main, those two files only.
    Title: [fork demo — not for upstream] Scaffold HeunLiteScheduler contract
-   Expect check-run overlay-gate (ramp-kit-overlay). Inherited Hugging Face jobs may be red or idle — leave them.
-   Body: rule ids, the two source files you grounded in, leftover math TODO, file-scoped gate, did not copy the bad fixture.
+   Never PR huggingface/diffusers. Do not overwrite .ai/ or root AGENTS.md. Do not delete inherited workflows.
+   Do not copy ramp-kit/examples/candidate_scheduler/. Do not touch scheduling_euler_lite.py.
 
-Then stop. Report paths, 0-findings gate, tests (skips OK), and the draft PR URL.
-Do not merge. Do not implement the sampler. Do not export the public API.
+Then stop. Report the two paths, blocking rule ids, 0 blocking, leftover TODO(engineer), draft PR URL. Do not merge.
 ```
 
 ---
@@ -103,56 +84,39 @@ primary; `make demo-contribute KEEP=1` as fallback.
   `.cursor/mcp.optional.json`.
 - **Confirm rules loaded:** the Agent sidebar should show `00-conventions`
   active; `10-scheduler` auto-attaches once a scheduler file is open.
-- **Optional, for green behavioral tests:** `pip install torch diffusers`. Without
-  them, the gate and the structural/signature tests still pass (AST-based); the
-  behavioral tests skip cleanly.
+- **Torch is optional.** The gate and the structural/signature tests still pass
+  without it (AST-based). Behavioral tests skip; that is success, not a prompt
+  to implement `step()`.
 
 ---
 
 ## Prompt A (kit stand-in) — rehearsal only
 
 ```
-You are onboarding onto this repo (a stand-in for huggingface/diffusers) and must
-follow its convention-as-code system. Do NOT rely on training memory for how
-diffusers works — this repo's rules are the source of truth.
+You are onboarding onto this repo (a stand-in for huggingface/diffusers).
+Done is only what conventions/rules.yaml checks. Copy the templates. Do not
+design a scheduler.
 
-Context you must use (they're already in the repo):
-- conventions/rules.yaml is the single source of truth for all conventions.
-- The always-on rules in .cursor/rules/ and the auto-attached 10-scheduler rules
-  are generated from it.
-- Ground the scheduler contract by reading examples/scaffolded_scheduler and the
-  rules tagged component: scheduler. Optional docs CLI (MCP is not required):
-  `python3 tools/docs_mcp_server.py --query "scheduler set_timesteps step"`.
-- .cursorignore defines your approved context boundary — do not read or copy from
-  outside it.
+Create exactly these two files:
+- src/diffusers/schedulers/scheduling_euler_lite.py
+- tests/schedulers/test_scheduling_euler_lite.py
 
-Do these steps in order and narrate what you're doing:
+1. Read conventions/rules.yaml. Blocking ids: SCHED001, SCHED002, SCHED003,
+   REPRO001, DEVICE001, DEPR001, MUT001, TEST001, TEST002.
 
-1. Run the gate on the existing bad example and summarise what it catches, by rule id:
-   `python3 tools/convention_check.py examples/candidate_scheduler`
+2. Follow .cursor/commands/scaffold.md for EulerLite: copy
+   templates/scheduler/scheduling_TEMPLATE.py and
+   tests/_templates/scheduler_test.py. Rename TemplateScheduler →
+   EulerLiteScheduler. Keep TODO(engineer) in step(). Set TARGET and CLASS only.
 
-2. Using the /scaffold workflow in .cursor/commands/scaffold.md, scaffold a NEW
-   scheduler called `EulerLiteScheduler`:
-   - Ground the contract from the registry and the scaffolded reference, not from memory.
-   - Create src/diffusers/schedulers/scheduling_euler_lite.py, satisfying every
-     rule tagged `component: scheduler` in the registry.
-   - Leave the numerical update rule as a clearly marked TODO — do NOT fabricate
-     the math. Scaffold the contract, not the algorithm.
-   - Create tests/schedulers/test_scheduling_euler_lite.py from
-     tests/_templates/scheduler_test.py (satisfies TEST001; the test must mention
-     set_timesteps and step).
+3. python3 tools/convention_check.py src/diffusers/schedulers/scheduling_euler_lite.py
+   Fix blocking findings only. Stop at 0 blocking.
 
-3. Run the gate on your new file and fix every BLOCKING finding until it's clean:
-   `python3 tools/convention_check.py src/diffusers/schedulers/scheduling_euler_lite.py`
+4. python3 -m unittest tests.schedulers.test_scheduling_euler_lite -v
+   Skips without torch are success — do not edit step() to make behavioral tests pass.
 
-4. Run the tests: `python3 -m unittest discover -s tests -t .`
-
-5. Report: which rules you satisfied, which files you grounded in, what the
-   engineer still needs to implement (the math), and confirm you stayed within
-   the .cursorignore boundary.
-
-Constraints: stay in bounds, cite rule ids in your summary, and stop with a clean
-gate — don't invent numerical behaviour to make tests pass.
+5. Report the two paths, blocking rule ids, 0 blocking, leftover TODO(engineer).
+   Stay inside .cursorignore. Do not copy examples/candidate_scheduler/.
 ```
 
 ## Prompt B — prove maintainability (requirement #4, ~30s)
@@ -186,12 +150,12 @@ the tooling. Keep it minimal; do not implement a real model.
 
 - **Kit first, then fork:** catch-early on this repo; the write lands on the
   real library tree.
-- **Grounding:** the agent reads `scheduling_euler_discrete.py` and
-  `scheduling_ddpm.py`, then the gate — reasoning from the repo, not memory.
-  MCP is opt-in, not the demo.
-- **Catch-early:** the gate flags the bad example by rule id, with fixes.
-- **Correct scaffold:** the new scheduler lands in `src/diffusers/schedulers/`
-  and passes the gate at 0 findings; the math is an honest TODO, not fabricated.
+- **Grounding:** the agent reads `ramp-kit/conventions/rules.yaml` and copies
+  the overlay templates. Euler/DDPM source is how *we* verified the YAML, not
+  the first-PR recipe. MCP is opt-in, not the demo.
+- **Catch-early:** you run this on the **kit**, not inside Prompt A.
+- **Correct scaffold:** two files in `src/diffusers/schedulers/` + matching
+  test; file-scoped gate 0 blocking; `TODO(engineer)` still in `step()`.
 - **File-scoped gate:** never `convention_check.py --all` on the fork.
 - **Multi-audience:** open `projections/pm|qa|devops/` and `.github/` — same
   rules, different surface. Note the upstream-vs-customer split. One registry,

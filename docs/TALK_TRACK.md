@@ -54,14 +54,14 @@ open on the fork until they have seen the registry and the gate.
 **12–22 min · the fork (real library).** Launch / paste Prompt A on
 `alex-16moro/diffusers`. Overlay is `ramp-kit/` (gitignored clone).
 
-1. **Ground in source, then the gate.** Open
-   `src/diffusers/schedulers/scheduling_euler_discrete.py` and
-   `scheduling_ddpm.py`. "Code beats the philosophy doc (`set_timesteps`, not
-   `set_num_inference_steps`). The gate is still the authority."
-2. **Scaffold.** `/scaffold scheduler EulerLite` writes
-   `src/diffusers/schedulers/scheduling_euler_lite.py`. Open the
-   `TODO(engineer)` in `step`. "Contract, not the algorithm."
-3. **File-scoped gate only** — never `--all` on this library. 0 findings on the
+1. **You** may open `scheduling_euler_discrete.py` / `scheduling_ddpm.py` to
+   show how the YAML was verified (`set_timesteps`, not
+   `set_num_inference_steps`). That is not the engineer's diff. Their
+   checklist is `ramp-kit/conventions/rules.yaml` plus the overlay templates.
+2. **Scaffold.** `/scaffold scheduler HeunLite` writes
+   `src/diffusers/schedulers/scheduling_heun_lite.py`. Open the
+   `TODO(engineer)` in `step`. "Two files the gate checks. Not a sampler."
+3. **File-scoped gate only** — never `--all` on this library. 0 blocking on the
    new file; behavioral tests skip without torch.
 4. **PR this fork**, draft, **base `main`**, title `[fork demo — not for upstream]`. Overlay
    clearance ≠ Hugging Face CI. We do **not** delete inherited workflow files.
@@ -95,8 +95,8 @@ If they ask how docs were searched: CLI
 - "I did not grow a capability per SDLC step. That is how these kits fragment."
 - "The fork overlay ships **empty MCP by default**. Cloud Agents skip project
   `mcp.json`; stdio cannot set `cwd` or expand `${workspaceFolder}`; Hub HTTP
-  MCP is Hub search + OAuth, not library source. Grounding is Read/Grep on the
-  two scheduler files, then the gate. Keyword MCP/`--query` is opt-in on
+  MCP is Hub search + OAuth, not library source. The first PR copies overlay
+  templates and runs the file-scoped gate. Keyword MCP/`--query` is opt-in on
   Desktop (`mcp.optional.json`). I skipped *embeddings* inside that search —
   keyword over curated docs first."
 - "I went deep on schedulers, not shallow on all three components, because
