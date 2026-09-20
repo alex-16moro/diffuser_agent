@@ -101,24 +101,44 @@ def load_rules() -> list[Rule]:
     return rules
 
 
+def _paths_for_apply(rel_path: str) -> tuple[str, ...]:
+    """Repo-relative paths to match against applies_to globs.
+
+    On the library fork the overlay clone lives at ``ramp-kit/``, so a fixture
+    such as ``ramp-kit/examples/candidate_scheduler/scheduling_my_sde.py`` must
+    still match ``examples/**``. Strip only that overlay-clone prefix. Do not
+    rewrite any other leading segment (real library files stay exact).
+    """
+    rel = rel_path.replace("\\", "/")
+    out = [rel]
+    prefix = "ramp-kit/"
+    if rel.startswith(prefix):
+        stripped = rel[len(prefix) :]
+        if stripped:
+            out.append(stripped)
+    return tuple(out)
+
+
 def rule_applies(rule: Rule, rel_path: str) -> bool:
     """A rule applies if any of its globs match the file's repo-relative path.
 
     Matching is deliberately precise so a rule never leaks onto files it wasn't
     scoped to (e.g. the kit's own tooling/tests). Two ways a glob can match:
-      1. full-path fnmatch against the repo-relative path, and
+      1. full-path fnmatch against the repo-relative path (and, if present, the
+         same path with a leading ``ramp-kit/`` overlay-clone prefix stripped),
       2. a *filename-convention* glob (like `.../scheduling_*.py`) matched
          against just the basename — but only when that basename glob is a real
          pattern, never a bare `**` catch-all.
     """
     from fnmatch import fnmatch
 
-    for pat in rule.applies_to:
-        if fnmatch(rel_path, pat):
-            return True
-        base = pat.split("/")[-1]
-        if base not in ("**", "*") and "*" in base and fnmatch(Path(rel_path).name, base):
-            return True
+    for candidate in _paths_for_apply(rel_path):
+        for pat in rule.applies_to:
+            if fnmatch(candidate, pat):
+                return True
+            base = pat.split("/")[-1]
+            if base not in ("**", "*") and "*" in base and fnmatch(Path(candidate).name, base):
+                return True
     return False
 
 
