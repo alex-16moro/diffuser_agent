@@ -22,42 +22,48 @@ Do **not** enable Hub HTTP MCP. The draft PR **base must be `main`** so overlay
 CI (`ramp-kit-overlay` / `overlay-gate`) actually runs. Do not stack onto a
 `cursor/…` topic branch.
 
-`EulerLiteScheduler` is already on fork `main`. This prompt scaffolds **HeunLite**.
+`EulerLiteScheduler` and `HeunLiteScheduler` files are already on fork `main`.
+This prompt scaffolds a **new unused** name (example: **PNDMLite**) and runs the
+library's own CI tools until they pass. Do not overwrite existing lite files.
 
 ```
 You just joined. First contribution on this huggingface/diffusers FORK (alex-16moro/diffusers). Overlay: ramp-kit/ (from alex-16moro/diffuser_agent).
 
-Done is only what ramp-kit/conventions/rules.yaml checks. The templates already pass those checks. Copy them. Do not design a scheduler.
+Copy the overlay templates. Do not design a scheduler. Keep TODO(engineer) in step(). Do not disable inherited workflows. Do not overwrite .ai/ or root AGENTS.md.
 
 If ramp-kit/ is missing:
   git clone --depth 1 https://github.com/alex-16moro/diffuser_agent.git ramp-kit
 
-Scope — create exactly these two files, then stop:
-- src/diffusers/schedulers/scheduling_heun_lite.py
-- tests/schedulers/test_scheduling_heun_lite.py
+Pick an unused PascalCase name. If scheduling_euler_lite.py / scheduling_heun_lite.py / scheduling_pndm_lite.py already exist, pick a different unused $2. Example when those three are free: PNDMLite → PNDMLiteScheduler.
 
-Do this:
+Follow ramp-kit overlay /scaffold (.cursor/commands/scaffold.md):
 
-1. Read ramp-kit/conventions/rules.yaml. Blocking ids for this change: SCHED001, SCHED002, SCHED003, REPRO001, DEVICE001, DEPR001, MUT001, TEST001, TEST002.
+1. Read ramp-kit/conventions/rules.yaml. Blocking ids: SCHED001, SCHED002, SCHED003, REPRO001, DEVICE001, DEPR001, MUT001, TEST001, TEST002.
 
-2. Copy ramp-kit/templates/scheduler/scheduling_TEMPLATE.py → src/diffusers/schedulers/scheduling_heun_lite.py
-   Rename TemplateScheduler → HeunLiteScheduler. Keep TODO(engineer) in step().
+2. Copy ramp-kit/templates/scheduler/scheduling_TEMPLATE.py → src/diffusers/schedulers/scheduling_<snake>.py
+   Rename TemplateScheduler → $2Scheduler. Keep TODO(engineer) in step().
+   After the copy, no TEMPLATE —, CHANGE_ME, ChangeMeScheduler, or TemplateScheduler may remain.
 
-3. Copy ramp-kit/tests/_templates/scheduler_test.py → tests/schedulers/test_scheduling_heun_lite.py
-   Set TARGET and CLASS only.
+3. Copy ramp-kit/tests/_templates/scheduler_test.py → tests/schedulers/test_scheduling_<snake>.py
+   Set TARGET and CLASS. Replace every other template token.
 
-4. python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_heun_lite.py
+4. Register $2Scheduler alphabetically in src/diffusers/schedulers/__init__.py, src/diffusers/__init__.py, then: python utils/check_dummies.py --fix_and_overwrite
+
+5. python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_<snake>.py
    Fix blocking findings only. Stop at 0 blocking. Never convention_check.py --all.
 
-5. python3 -m unittest tests.schedulers.test_scheduling_heun_lite -v
-   Structural/signature must pass. Skips without torch are success — do not edit step() to make behavioral tests pass.
+6. Invoke the library's own tooling until each exits 0 (do not reimplement them):
+   make style
+   make quality
+   python utils/check_copies.py && python utils/check_dummies.py && python utils/check_repo.py
+   python3 -m unittest tests.schedulers.test_scheduling_<snake> -v
+   Do not edit step() math. Behavioral tests with torch must pass.
 
-6. Draft PR on this fork, base main, those two files only.
-   Title: [fork demo — not for upstream] Scaffold HeunLiteScheduler contract
-   Never PR huggingface/diffusers. Do not overwrite .ai/ or root AGENTS.md. Do not delete inherited workflows.
-   Do not copy ramp-kit/examples/candidate_scheduler/. Do not touch scheduling_euler_lite.py.
+7. Draft PR on this fork, base main, only after those commands pass.
+   Title: [fork demo — not for upstream] Add $2Scheduler scaffold
+   Never PR huggingface/diffusers. Do not copy ramp-kit/examples/candidate_scheduler/.
 
-Then stop. Report the two paths, blocking rule ids, 0 blocking, leftover TODO(engineer), draft PR URL. Do not merge.
+Then stop. Report paths, blocking rule ids, 0 blocking, leftover TODO(engineer), library-gate exit codes, draft PR URL. Do not merge.
 ```
 
 ---
@@ -153,13 +159,14 @@ the tooling. Keep it minimal; do not implement a real model.
   the overlay templates. Euler/DDPM source is how *we* verified the YAML, not
   the first-PR recipe. MCP is opt-in, not the demo.
 - **Catch-early:** you run this on the **kit**, not inside Prompt A.
-- **Correct scaffold:** two files in `src/diffusers/schedulers/` + matching
-  test; file-scoped gate 0 blocking; `TODO(engineer)` still in `step()`.
+- **Correct scaffold:** scheduler + matching test with no leftover placeholders;
+  registered in inits/dummies; file-scoped gate 0 blocking; `TODO(engineer)`
+  still in `step()`; library `make style` / `make quality` / check_* green.
 - **File-scoped gate:** never `convention_check.py --all` on the fork.
 - **Multi-audience:** open `projections/pm|qa|devops/` and `.github/` — same
   rules, different surface. Note the upstream-vs-customer split. One registry,
   many projections — not a capability per SDLC step.
 - **Fork PR hygiene:** draft, **base `main`**, `[fork demo — not for upstream]`.
   Overlay-gate is the customer check-run. Overlay green does not mean Hugging
-  Face CI is green; do not delete their workflows. Two files only; math stays TODO.
+  Face CI is green; do not delete their workflows. Math stays TODO.
 - **Maintainability:** Prompt B — one edit propagates everywhere.

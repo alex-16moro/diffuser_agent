@@ -16,6 +16,62 @@ sys.path.insert(0, str(ROOT / "tools"))
 from convention_check import check_file, load_rules  # noqa: E402
 
 
+class TestRuleAppliesOverlayPrefix(unittest.TestCase):
+    """Path-prefixed applies_to globs must match overlay clones at ramp-kit/."""
+
+    REQUIRED_BLOCKING = {
+        "TEST001",
+        "SCHED001",
+        "SCHED002",
+        "SCHED003",
+        "DEPR001",
+        "MUT001",
+        "REPRO001",
+        "DEVICE001",
+    }
+
+    def test_paths_for_apply_strips_only_leading_ramp_kit(self):
+        from convention_check import _paths_for_apply
+
+        overlay = "ramp-kit/examples/candidate_scheduler/scheduling_my_sde.py"
+        self.assertEqual(
+            _paths_for_apply(overlay),
+            (overlay, "examples/candidate_scheduler/scheduling_my_sde.py"),
+        )
+        real = "src/diffusers/schedulers/scheduling_pndm.py"
+        self.assertEqual(_paths_for_apply(real), (real,))
+        nested = "examples/ramp-kit/scheduling_x.py"
+        self.assertEqual(_paths_for_apply(nested), (nested,))
+
+    def test_prefixed_rules_match_overlay_fixture(self):
+        from convention_check import load_rules, rule_applies
+
+        rel = "ramp-kit/examples/candidate_scheduler/scheduling_my_sde.py"
+        ids = {r.id for r in load_rules() if rule_applies(r, rel)}
+        missing = self.REQUIRED_BLOCKING - ids
+        self.assertFalse(missing, f"overlay fixture missed {missing}")
+
+    def test_does_not_loosen_real_repo_files(self):
+        from convention_check import Rule, rule_applies
+
+        examples_only = Rule(
+            id="X",
+            title="t",
+            severity="block",
+            check="regex",
+            applies_to=["examples/**"],
+            params={},
+            agent_hint="",
+        )
+        self.assertTrue(
+            rule_applies(examples_only, "ramp-kit/examples/candidate_scheduler/x.py")
+        )
+        self.assertFalse(
+            rule_applies(examples_only, "src/diffusers/schedulers/scheduling_pndm.py")
+        )
+        self.assertFalse(rule_applies(examples_only, "tools/convention_check.py"))
+
+
 class TestLibraryPaths(unittest.TestCase):
     def test_kit_standin_or_adjacent_fork(self):
         from library_paths import KIT_ROOT, resolve_docs_root, resolve_library_root
@@ -679,24 +735,31 @@ class TestEngineerPromptScope(unittest.TestCase):
     def test_prompt_a_stays_inside_registry_checked_files(self):
         paste = self._fork_prompt_a_paste()
         self.assertIn("conventions/rules.yaml", paste)
-        self.assertIn("scheduling_heun_lite.py", paste)
-        self.assertIn("test_scheduling_heun_lite.py", paste)
         self.assertIn("TODO(engineer)", paste)
         self.assertIn("scheduling_TEMPLATE.py", paste)
+        self.assertIn("check_dummies.py", paste)
+        self.assertIn("make style", paste)
+        self.assertIn("make quality", paste)
+        self.assertIn("check_copies.py", paste)
+        self.assertIn("check_repo.py", paste)
         self.assertNotIn("scheduling_euler_discrete.py", paste)
         self.assertNotIn("scheduling_ddpm.py", paste)
         self.assertNotIn("docs_mcp_server.py", paste)
         self.assertNotIn("docs/source", paste)
         self.assertNotIn("search_docs", paste)
         self.assertNotIn("grokbot_sim", paste)
+        self.assertIn("Never convention_check.py --all", paste)
 
     def test_overlay_scaffold_copies_templates_not_library_source(self):
         text = (ROOT / "overlay" / "scaffold.md").read_text()
         self.assertIn("rules.yaml", text)
         self.assertIn("scheduling_TEMPLATE.py", text)
+        self.assertIn("make style", text)
+        self.assertIn("check_dummies.py", text)
         self.assertNotIn("Those files are the contract", text)
         self.assertNotIn("docs_mcp_server.py", text)
         self.assertNotIn("scheduling_euler_discrete.py", text)
+        self.assertNotIn("convention_check.py --all", text)
 
 
 class TestOverlayPrGate(unittest.TestCase):
@@ -779,6 +842,21 @@ class TestDemoContribute(unittest.TestCase):
         self.assertIn("0 findings", proc.stdout.lower() + proc.stderr.lower() or proc.stdout)
         self.assertFalse(impl.exists(), "default run must not leave contribution files")
         self.assertFalse(test.exists())
+
+    def test_keep_run_has_no_template_placeholders(self):
+        from demo_contribute import _LEFTOVER_PLACEHOLDERS, class_name, paths_for, scaffold
+
+        name = "PlaceholderProbe"
+        cls, impl, test = paths_for(name)
+        self.addCleanup(lambda: impl.exists() and impl.unlink())
+        self.addCleanup(lambda: test.exists() and test.unlink())
+        scaffold(cls, impl, test)
+        combined = impl.read_text() + "\n" + test.read_text()
+        for tok in _LEFTOVER_PLACEHOLDERS:
+            self.assertNotIn(tok, combined)
+        self.assertIn("TODO(engineer)", impl.read_text())
+        self.assertIn(class_name(name), impl.read_text())
+        self.assertIn(class_name(name), test.read_text())
 
 
 if __name__ == "__main__":
