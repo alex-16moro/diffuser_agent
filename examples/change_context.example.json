@@ -1,0 +1,16 @@
+{
+  "pr": {
+    "number": 3,
+    "title": "[fork demo — not for upstream] Scaffold EulerLiteScheduler contract",
+    "issue": "#1 first-contribution EulerLite scheduler (contract only; step() stays TODO)",
+    "milestone": "ramp-kit first contribution",
+    "labels": ["fork-demo", "scheduler", "scaffold"],
+    "draft": true
+  },
+  "ci": {
+    "convention_gate": "green",
+    "drift_check": "green",
+    "inherited_workflows": "present (fork Actions may be red; expected, do not delete)"
+  },
+  "state": "scaffolded"
+}
