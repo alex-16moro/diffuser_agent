@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -410,6 +411,9 @@ class TestGrokbotIphonePack(unittest.TestCase):
         self.assertIn("do not brief on merge", qa.lower())
         self.assertIn("do not brief on merge", pm.lower())
         self.assertIn("Optional: after merge", devops)
+        self.assertIn("ramp-kit-overlay", devops)
+        self.assertIn("do not copy it", devops.lower())
+        self.assertNotIn("enable convention-gate.yml on the fork", devops.lower())
         self.assertIn("closed", devops.lower())
         for role in ("qa", "pm", "devops"):
             agent = ROOT / ".cursor" / "agents" / f"grokbot-{role}.md"
@@ -555,6 +559,91 @@ class TestAttachEmptyMcp(unittest.TestCase):
             self.assertEqual(cfg.get("mcpServers"), {})
             self.assertTrue((fake / ".cursor" / "mcp.optional.json").is_file())
             self.assertNotIn("AGENTS.md", [p.name for p in fake.iterdir()])
+            wf = (fake / ".github" / "workflows" / "ramp-kit-overlay.yml").read_text()
+            self.assertIn("ramp-kit-overlay", wf)
+            self.assertNotIn("convention_check.py --all", wf)
+            self.assertIn("Never convention_check --all", wf)
+            self.assertTrue((fake / ".github" / "scripts" / "overlay_pr_gate.py").is_file())
+
+    def test_attach_does_not_delete_inherited_workflows(self):
+        with tempfile.TemporaryDirectory() as td:
+            fake = Path(td) / "diffusers"
+            (fake / "src" / "diffusers" / "schedulers").mkdir(parents=True)
+            inherited = fake / ".github" / "workflows" / "pr_tests.yml"
+            inherited.parent.mkdir(parents=True)
+            inherited.write_text("name: inherited\n")
+            proc = subprocess.run(
+                [sys.executable, str(ROOT / "tools" / "attach_library.py"),
+                 "--target", str(fake)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+            self.assertTrue(inherited.is_file())
+            self.assertEqual(inherited.read_text(), "name: inherited\n")
+            self.assertTrue((fake / ".github" / "workflows" / "ramp-kit-overlay.yml").is_file())
+
+
+class TestOverlayPrGate(unittest.TestCase):
+    def test_skips_when_no_relevant_files(self):
+        env = {**os.environ, "OVERLAY_GATE_FILES": "README.md", "OVERLAY_KIT": str(ROOT)}
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "overlay_pr_gate.py")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("skip", proc.stdout.lower())
+
+    def test_file_scoped_clean_and_refuses_all(self):
+        target = ROOT / "examples" / "scaffolded_scheduler" / "scheduling_ddpm_lite.py"
+        env = {
+            **os.environ,
+            "OVERLAY_GATE_FILES": str(target.relative_to(ROOT)),
+            "OVERLAY_KIT": str(ROOT),
+        }
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "overlay_pr_gate.py")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        self.assertIn("file-scoped", proc.stdout.lower())
+        refuse = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "overlay_pr_gate.py"), "--all"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(refuse.returncode, 2)
+        self.assertIn("refusing --all", refuse.stderr)
+
+    def test_flags_candidate_scheduler(self):
+        target = ROOT / "examples" / "candidate_scheduler" / "scheduling_my_sde.py"
+        env = {
+            **os.environ,
+            "OVERLAY_GATE_FILES": str(target.relative_to(ROOT)),
+            "OVERLAY_KIT": str(ROOT),
+        }
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "overlay_pr_gate.py")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertGreater(proc.returncode, 0, proc.stdout + proc.stderr)
 
 
 class TestDemoContribute(unittest.TestCase):

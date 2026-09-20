@@ -49,3 +49,13 @@ contract facts.
     omitted and stdin is a TTY, the sim scans `examples/scaffolded_scheduler`
     (0 findings) so the EulerLite demo is offline-runnable. Source tags on
     every claim: `[gate]` `[ci]` `[issue]` `[drift]`.
+
+11. **Fork overlay CI is file-scoped, not kit `--all`.** The DevOps gap on
+    first-contribution PRs was: no GitHub check-run for the overlay gate,
+    and the bot recommended enabling kit `convention-gate.yml` (which
+    would `--all` the library). Attach now copies
+    `overlay/ramp-kit-overlay.yml`. DevOps must not recommend copying the
+    kit `--all` workflow onto the fork. Inherited HF Actions idle/red on
+    a fork demo stay expected. A new workflow does not run until it exists
+    on the PR base (`main`). Merge follow-up reports the **base** branch,
+    not the topic head.

@@ -186,21 +186,40 @@ drift_check, inherited_workflows) — not scheduler findings. Cheap
 pipeline first. Do not "fix" red HF jobs by deleting inherited workflows.
 
 ### Pipeline health
-`[ci]` convention_gate. `[drift]` drift_check. `[ci]` inherited_workflows.
-File-scoped overlay gate vs `--all` on the library (forbidden).
+Customer overlay CI is `.github/workflows/ramp-kit-overlay.yml` (file-scoped
+`convention_check` on changed scheduler/test files). Kit
+`convention-gate.yml` uses `--all` and is **kit-only** — do not copy it
+onto this library fork. Do not recommend "enable convention-gate.yml
+on the fork."
+
+`[ci]` look for check-run `ramp-kit-overlay`. `[drift]` kit projection
+drift is kit-only (not this fork). `[ci]` inherited_workflows: present
+and left alone; idle or red on a fork demo is expected.
+
+If `ramp-kit-overlay.yml` is missing from the PR **base** (usually
+`main`): ATTENTION. Next step is attach the overlay workflow
+(`make attach` / copy `overlay/ramp-kit-overlay.yml`) so it lands on
+the default branch — GitHub will not run a new workflow until then.
+If the file exists only on the head branch, say that; do not enable
+`--all`.
 
 ### Overlay vs upstream CI
 Overlay 0 findings = customer clearance. Inherited Hugging Face Actions
-may be red on a fork demo — expected, not a reason to disable them.
+may be red or idle on a fork demo — expected, not a reason to disable
+them and not a reason to paste the kit `--all` workflow here.
 
 ### Signal
 RED if overlay blocking > 0 `[gate]`. GREEN mechanical ≠ upstream-green.
+Missing overlay workflow = ATTENTION (gap), not a ship/no-ship from
+inherited HF jobs.
 
 ### Optional: after merge (DevOps only)
-If the event is `closed` and merged, write four lines max: landed on
-which branch/SHA, overlay MCP still empty / attachable, inherited HF
-workflows left alone, signal on main. Do not rewrite the pre-merge
-briefing. Do not treat merge as QA or PM clearance.""",
+If the event is `closed` and merged, write four lines max. **Landed-on
+= the PR base branch** (where GitHub merged it), not the head topic
+branch. Overlay MCP still empty / attachable. Inherited HF workflows
+left alone. Overlay check-run if it existed on that base; else the
+same ATTENTION as above. Do not rewrite the pre-merge briefing. Do
+not treat merge as QA or PM clearance.""",
     },
 }
 
@@ -500,6 +519,10 @@ def build_devops():
         "  GrokBot role-agents brief a first-contribution PR for that owner; they never gate.",
         "  Specs: `agents/grokbot-*.md` (repo wins). Trigger: PR opened/updated.",
         "  Optional DevOps-only: closed-as-merged landed note.",
+        "- **This kit** runs `.github/workflows/convention-gate.yml` with `--all`.",
+        "  **The library fork** must not. Attach copies `overlay/ramp-kit-overlay.yml`",
+        "  → `.github/workflows/ramp-kit-overlay.yml` (file-scoped; never `--all`;",
+        "  does not delete inherited Hugging Face workflows).",
         "",
         "## Owner-tagged rules (devops)",
     ]
@@ -662,8 +685,11 @@ def _grokbot_merge_routine() -> str:
         f"1. git -C {KIT_DIR} pull || git clone {KIT_REPO} {KIT_DIR}\n"
         f"2. Read {KIT_DIR}/agents/grokbot-devops.md — that file wins.\n"
         "3. If closed without merge, do nothing.\n"
-        "4. Four lines max: landed branch/SHA; overlay MCP still empty / "
-        "attachable; inherited HF workflows untouched; signal on main.\n"
+        "4. Four lines max: landed **base** branch/SHA (not the topic head); "
+        "overlay MCP still empty / attachable; inherited HF workflows "
+        "untouched; overlay check-run `ramp-kit-overlay` or ATTENTION if "
+        "that workflow is not on the base. Never recommend copying kit "
+        "convention-gate.yml (--all) onto the fork.\n"
         "5. Do not re-run the QA/PM digest. Do not approve, merge, or fail a job."
     )
 

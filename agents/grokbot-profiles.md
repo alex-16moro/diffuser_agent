@@ -1,6 +1,6 @@
 <!-- GENERATED from conventions/rules.yaml by tools/build_projections.py. DO NOT EDIT. Run `make build`. -->
 
-# Grok Bot profiles
+# Grok Bot profiles (iPhone + desktop)
 
 Grok Bot does **not** import git. Paste this **short stub** into
 **Edit Profile** once. The Bot `git pull`s the kit and reads
@@ -158,7 +158,7 @@ Optional follow-up, not the primary briefing. QA and PM stay silent.
 1. git -C /workspace/diffuser_agent pull || git clone https://github.com/alex-16moro/diffuser_agent /workspace/diffuser_agent
 2. Read /workspace/diffuser_agent/agents/grokbot-devops.md — that file wins.
 3. If closed without merge, do nothing.
-4. Four lines max: landed branch/SHA; overlay MCP still empty / attachable; inherited HF workflows untouched; signal on main.
+4. Four lines max: landed **base** branch/SHA (not the topic head); overlay MCP still empty / attachable; inherited HF workflows untouched; overlay check-run `ramp-kit-overlay` or ATTENTION if that workflow is not on the base. Never recommend copying kit convention-gate.yml (--all) onto the fork.
 5. Do not re-run the QA/PM digest. Do not approve, merge, or fail a job.
 ```
 

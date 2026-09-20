@@ -34,3 +34,14 @@ OAuth or stdio cwd failures. Opt-in servers: `.cursor/mcp.optional.json`.
 4. Open the PR **on this fork**, not on huggingface/diffusers.
 
 Catch-early fixture: `ramp-kit/examples/candidate_scheduler` — do not copy it.
+
+## Overlay CI (file-scoped)
+
+Attach copies `.github/workflows/ramp-kit-overlay.yml`. It runs
+`convention_check` on **changed** `scheduling_*.py` / `test_scheduling_*.py`
+only. It does **not** run `--all`. It does **not** replace inherited
+Hugging Face workflows.
+
+GitHub runs workflows that already exist on the PR **base** (usually
+`main`). Land this file on `main` before you expect a check-run. The kit
+workflow `convention-gate.yml` stays in the kit repo.
