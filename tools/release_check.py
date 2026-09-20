@@ -75,17 +75,25 @@ def _run(cmd: list[str], cwd: Path, env: dict | None = None) -> subprocess.Compl
     )
 
 
+def compare_spec(lib: Path) -> str:
+    """Prefer origin/main. If the tree already matches (change landed), use ~1.
+
+    Do not fall back to local `main` — on a fork that ref may be upstream
+    and would report every overlay export as new.
+    """
+    for spec in ("origin/main", "origin/main~1"):
+        proc = _run(["git", "diff", "--name-only", spec], cwd=lib)
+        if proc.returncode == 0 and (proc.stdout or "").strip():
+            return spec
+    return "origin/main"
+
+
 def detect_new_export(lib: Path) -> str:
-    proc = _run(
-        ["git", "diff", "origin/main", "--", "src/diffusers/__init__.py"],
+    spec = compare_spec(lib)
+    diff = _run(
+        ["git", "diff", spec, "--", "src/diffusers/__init__.py"],
         cwd=lib,
-    )
-    if proc.returncode != 0:
-        proc = _run(
-            ["git", "diff", "main", "--", "src/diffusers/__init__.py"],
-            cwd=lib,
-        )
-    diff = proc.stdout or ""
+    ).stdout or ""
     added = re.findall(r'^\+\s+"([A-Za-z_][A-Za-z0-9_]+)",?\s*$', diff, re.M)
     added += re.findall(r"^\+\s+([A-Z][A-Za-z0-9]+),?\s*$", diff, re.M)
     removed = set(re.findall(r'^\-\s+"([A-Za-z_][A-Za-z0-9_]+)",?\s*$', diff, re.M))
@@ -118,16 +126,17 @@ def _step(name: str, command: str, status: str, detail: str = "") -> dict:
 
 def advisories(lib: Path, obj: str) -> list[str]:
     notes: list[str] = []
+    spec = compare_spec(lib)
     names = _run(
-        ["git", "diff", "--name-only", "origin/main"],
+        ["git", "diff", "--name-only", spec],
         cwd=lib,
-    ).stdout
+    ).stdout or ""
     if "changelog" not in names.lower() and "release note" not in names.lower():
         notes.append("no changelog/release-notes entry for the change")
     version_diff = _run(
-        ["git", "diff", "origin/main", "--", "setup.py", "src/diffusers/__init__.py"],
+        ["git", "diff", spec, "--", "setup.py", "src/diffusers/__init__.py"],
         cwd=lib,
-    ).stdout
+    ).stdout or ""
     if not re.search(r"^[-+].*__version__|^[-+].*version", version_diff, re.M | re.I):
         notes.append(
             "public API surface changed; confirm a version/semver decision"
