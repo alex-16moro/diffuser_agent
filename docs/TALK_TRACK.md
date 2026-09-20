@@ -69,9 +69,8 @@ open on the fork until they have seen the registry and the gate.
 Do not run kit `KEEP=1` before the fork agent if you want those files to appear
 live on the fork.
 
-MCP is **not** this beat. Default overlay `.cursor/mcp.json` is empty so Cloud
-does not hit Hub OAuth or stdio cwd failures. Opt-in: `.cursor/mcp.optional.json`.
-If they ask how docs were searched: CLI
+MCP is **stdio `diffusers-docs`**, not Hub HTTP. Cloud dropdown:
+`diffusers-docs-mcp`. If they ask how docs were searched without the tool: CLI
 `python3 ramp-kit/tools/docs_mcp_server.py --query "..."`.
 
 ### 22–30 min · Multi-audience + boundaries
@@ -93,11 +92,11 @@ If they ask how docs were searched: CLI
   regenerating a `10-<component>.mdc` from a tag — I can show that live in
   under a minute."
 - "I did not grow a capability per SDLC step. That is how these kits fragment."
-- "The fork overlay ships **empty MCP by default**. Cloud Agents skip project
-  `mcp.json`; stdio cannot set `cwd` or expand `${workspaceFolder}`; Hub HTTP
-  MCP is Hub search + OAuth, not library source. The first PR copies overlay
-  templates and runs the file-scoped gate. Keyword MCP/`--query` is opt-in on
-  Desktop (`mcp.optional.json`). I skipped *embeddings* inside that search —
+- "The fork overlay ships **stdio `diffusers-docs`**, not Hub HTTP. Cloud Agents
+  skip project `mcp.json`; paste `diffusers-docs-mcp` in the dropdown. Stdio
+  cannot set `cwd` or expand `${workspaceFolder}` — the launcher plus PATH shim
+  fix that. Hub HTTP MCP is Hub search + OAuth, not library source. Keyword
+  MCP/`--query` is the same server. I skipped *embeddings* inside that search —
   keyword over curated docs first."
 - "I went deep on schedulers, not shallow on all three components, because
   schedulers have the crispest enforceable contract — the best proof."

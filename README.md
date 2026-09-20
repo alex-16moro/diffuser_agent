@@ -138,12 +138,10 @@ is the customer simulation: **kit first** (catch the bad cut), then **fork**
 
 ## What I deliberately scoped OUT (and why)
 
-- **Embeddings-based ranking / default MCP on the fork.** Kit Desktop still
-  ships stdio MCP (`tools/docs_mcp_server.py`). The **fork overlay** ships
-  empty `mcpServers` so Cloud launches do not hit Hub OAuth or stdio cwd
-  failures. Grounding is the two scheduler source files plus the gate;
-  keyword `--query` / `mcp.optional.json` is opt-in. Embeddings stay out:
-  keyword over curated docs is the debuggable baseline.
+- **Embeddings-based ranking / Hub HTTP MCP.** Kit Desktop and the fork overlay
+  ship stdio MCP (`tools/docs_mcp_server.py`, NDJSON). Cloud dropdown:
+  `diffusers-docs-mcp`. Hub HTTP stays out of the default (OAuth, wrong corpus).
+  Embeddings stay out: keyword over curated docs is the debuggable baseline.
 - **A tool per SDLC step.** Plan/build/review/test/CI are projections of one
   YAML. A sixth "deploy" capability would fragment the kit.
 - **Model/pipeline scaffolds.** I built the scheduler path end-to-end rather than
@@ -199,7 +197,7 @@ src/diffusers/schedulers/       stand-in path `/scaffold` writes to
 .cursor/commands/scaffold.md    /scaffold <component> <Name> guided first task
 .cursor/hooks.json              afterFileEdit → the same gate CI runs
 .cursor/mcp.json                kit Desktop MCP (stdio; no ${workspaceFolder})
-overlay/mcp.json                fork overlay default (empty mcpServers)
+overlay/mcp.json                fork overlay default (stdio diffusers-docs, no Hub HTTP)
 overlay/mcp.optional.json       opt-in Hub HTTP + stdio for Desktop only
 .cursor/mcp-diffusers-docs.py   cwd-independent stdio launcher (Cloud-safe)
 .cursorignore                   approved context boundary (req. 3)

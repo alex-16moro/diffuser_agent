@@ -88,7 +88,7 @@ def copy_overlay(target: Path) -> None:
 
     print(f"overlay attached at {target}")
     print("  Cloud Agent: launch ON this fork (main), install clones ramp-kit/")
-    print("  Default MCP is empty; opt-in servers: .cursor/mcp.optional.json")
+    print("  Default MCP: stdio diffusers-docs (no Hub HTTP). Cloud dropdown: diffusers-docs-mcp")
     print("  Fork PRs: draft, title [fork demo — not for upstream]")
     print("  Overlay CI: .github/workflows/ramp-kit-overlay.yml (file-scoped, never --all)")
     print("  Do not overwrite upstream AGENTS.md / .ai/; do not delete HF workflows")

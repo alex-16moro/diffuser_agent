@@ -7,18 +7,19 @@ before launching a Cloud Agent. **Primary live write:** Cloud Agent on
 
 **Runbook:** `docs/LIVE_DEMO.md`.
 
-Default overlay MCP is **empty**. Do not paste Hub HTTP or stdio MCP into the
-Cloud launch for this demo. The engineer copies overlay templates and runs the
-file-scoped gate — not library source, not docs search. Opt-in servers live in
-`overlay/mcp.optional.json`.
+Default overlay MCP is **stdio `diffusers-docs`**, not Hub HTTP. Cloud dropdown:
+`diffusers-docs-mcp` or `python3 -u .cursor/mcp-diffusers-docs.py`. The first
+PR still copies templates and runs the file-scoped gate; `search_docs` is
+available, not a deliverable. Extra servers live in `overlay/mcp.optional.json`.
 
 ---
 
 ## Prompt A — first contribution ON THE FORK (paste this)
 
-Launch a **new** Cloud Agent on `alex-16moro/diffusers`, branch **`main`**. Leave
-MCP **off**. The draft PR **base must be `main`** so overlay CI
-(`ramp-kit-overlay` / `overlay-gate`) actually runs. Do not stack onto a
+Launch a **new** Cloud Agent on `alex-16moro/diffusers`, branch **`main`**. Enable
+stdio MCP (`diffusers-docs-mcp` or `python3 -u .cursor/mcp-diffusers-docs.py`).
+Do **not** enable Hub HTTP MCP. The draft PR **base must be `main`** so overlay
+CI (`ramp-kit-overlay` / `overlay-gate`) actually runs. Do not stack onto a
 `cursor/…` topic branch.
 
 `EulerLiteScheduler` is already on fork `main`. This prompt scaffolds **HeunLite**.
@@ -72,16 +73,14 @@ primary; `make demo-contribute KEEP=1` as fallback.
 ## Pre-flight (20 seconds, so nothing stalls live)
 
 - **Doctor:** `make doctor` — python3, PyYAML, Cursor files, MCP self-test,
-  overlay `mcp.json` empty.
-- **Kit Desktop MCP (optional, this repo only):** Cursor → Settings → **MCP** →
-  enable `diffusers-docs`. Config is `.cursor/mcp.json`
-  (`python3 -u .cursor/mcp-diffusers-docs.py`). It must **not** use
-  `${workspaceFolder}`.
-- **Fork / Cloud Agents:** overlay `.cursor/mcp.json` is `{ "mcpServers": {} }`.
-  Project MCP is **not** auto-loaded anyway. Do not add Hugging Face HTTP MCP
-  (Hub search + OAuth, wrong corpus) or stdio with `cwd` /
-  `${workspaceFolder}`. If you later opt in on Desktop, copy from
-  `.cursor/mcp.optional.json`.
+  overlay stdio `diffusers-docs` (no Hub HTTP).
+- **Kit Desktop MCP:** Cursor → Settings → **MCP** → enable `diffusers-docs`.
+  Config is `.cursor/mcp.json` (`python3 -u .cursor/mcp-diffusers-docs.py`).
+  It must **not** use `${workspaceFolder}`. Cloud dropdown: `diffusers-docs-mcp`.
+- **Fork / Cloud Agents:** overlay `.cursor/mcp.json` is stdio `diffusers-docs`
+  only. Project MCP is **not** auto-loaded on Cloud — paste
+  `diffusers-docs-mcp` (or `python3 -u .cursor/mcp-diffusers-docs.py`) in the
+  MCP dropdown. Do **not** add Hugging Face HTTP MCP (Hub search + OAuth).
 - **Confirm rules loaded:** the Agent sidebar should show `00-conventions`
   active; `10-scheduler` auto-attaches once a scheduler file is open.
 - **Torch is optional.** The gate and the structural/signature tests still pass

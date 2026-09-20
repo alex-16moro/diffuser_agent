@@ -49,7 +49,7 @@ SUPPORTED_PROTOCOL_VERSIONS = (
     "2025-06-18",
     "2025-11-25",
 )
-SERVER_INFO = {"name": "diffusers-docs", "version": "0.6.0"}
+SERVER_INFO = {"name": "diffusers-docs", "version": "0.7.0"}
 INSTRUCTIONS = (
     "Ground 'how does diffusers do X' in this repo before scaffolding. "
     "Call search_docs (query + optional k). Results include provenance "
@@ -141,10 +141,11 @@ def _handle(msg: dict):
             "jsonrpc": "2.0", "id": mid,
             "result": {
                 "protocolVersion": version,
+                # Advertise tools only. Claiming resources/prompts makes some
+                # Cloud clients call templates/list during discovery and treat
+                # method-not-found as a failed handshake (search_docs missing).
                 "capabilities": {
                     "tools": {"listChanged": False},
-                    "resources": {"listChanged": False},
-                    "prompts": {"listChanged": False},
                 },
                 "serverInfo": SERVER_INFO,
                 "instructions": INSTRUCTIONS,
@@ -159,10 +160,13 @@ def _handle(msg: dict):
         return {"jsonrpc": "2.0", "id": mid, "result": {}}
     if method == "tools/list":
         return {"jsonrpc": "2.0", "id": mid, "result": {"tools": [SEARCH_DOCS_TOOL]}}
-    if method == "resources/list":
-        return {"jsonrpc": "2.0", "id": mid, "result": {"resources": []}}
+    if method in ("resources/list", "resources/templates/list"):
+        key = "resourceTemplates" if "templates" in method else "resources"
+        return {"jsonrpc": "2.0", "id": mid, "result": {key: []}}
     if method == "prompts/list":
         return {"jsonrpc": "2.0", "id": mid, "result": {"prompts": []}}
+    if method == "completion/complete":
+        return {"jsonrpc": "2.0", "id": mid, "result": {"completion": {"values": []}}}
     if method == "tools/call":
         params = msg.get("params", {})
         if params.get("name") != "search_docs":
@@ -289,6 +293,7 @@ def _selftest() -> int:
         {"jsonrpc": "2.0", "id": 6, "method": "tools/call",
          "params": {"name": "search_docs",
                     "arguments": json.dumps({"query": "SchedulerMixin", "k": 1})}},
+        {"jsonrpc": "2.0", "id": 7, "method": "resources/templates/list"},
     ]
     # Reader still accepts Content-Length; writer emits NDJSON.
     stdin = io.BytesIO(b"".join(_frame(r) for r in reqs))
@@ -299,11 +304,13 @@ def _selftest() -> int:
     messages = _parse_ndjson(raw)
     assert messages[0]["result"]["serverInfo"]["name"] == "diffusers-docs", "initialize failed"
     assert messages[0]["result"]["protocolVersion"] == "2025-03-26", "protocol negotiate failed"
+    assert "resources" not in messages[0]["result"]["capabilities"], messages[0]
     assert messages[1]["result"]["tools"][0]["name"] == "search_docs", "tools/list failed"
     assert messages[2]["result"]["resources"] == [], "resources/list should be empty, not an error"
     assert messages[3]["result"]["prompts"] == [], "prompts/list should be empty, not an error"
     assert "content" in messages[4]["result"], "tools/call failed"
     assert "content" in messages[5]["result"], "tools/call JSON-string arguments failed"
+    assert messages[6]["result"]["resourceTemplates"] == [], "templates/list must not error"
     print("MCP self-test OK: initialize -> list -> search_docs (NDJSON).")
     print("  tools/call returned:\n   ",
           messages[4]["result"]["content"][0]["text"].replace("\n", "\n    ")[:400])
