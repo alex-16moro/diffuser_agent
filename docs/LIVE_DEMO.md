@@ -69,9 +69,16 @@ Then have the agent (or you) run:
 python3 ramp-kit/tools/convention_check.py ramp-kit/examples/candidate_scheduler
 python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_euler_lite.py
 python3 -m unittest tests.schedulers.test_scheduling_euler_lite -v
+python3 ramp-kit/tools/convention_check.py --json ramp-kit/examples/candidate_scheduler > /tmp/gate.json || true
+python3 ramp-kit/tools/grokbot_sim.py --role qa /tmp/gate.json
+python3 ramp-kit/tools/verify_scheduler_contract.py --library .
 ```
 
 Point at the `TODO(engineer)` in `step`. Stop. Do not fill in Euler math.
+
+GrokBot prints a **QA risk briefing** labelled SIMULATION. It does not gate.
+Contract re-verify must say `scheduler contract OK` against this checkout's
+`scheduling_ddpm.py` / `scheduling_euler_discrete.py`.
 
 If they ask for a docs search without MCP:
 
@@ -89,9 +96,13 @@ Open the PR **on this fork**, draft, title `[fork demo — not for upstream]`.
 
 ```bash
 make doctor
-make demo-contribute KEEP=1          # leaves EulerLite on disk
+make demo                    # catch-early, scaffolded 0 findings, MCP, tests, GrokBot QA, contract re-verify
+make demo-contribute KEEP=1  # leaves EulerLite on disk
 # walk the printed steps with them
-make demo-contribute-clean           # remove when done
+make grokbot ROLE=qa         # same sim from candidate_scheduler --json
+make drift                   # rebuild projections; git diff --exit-code (must be clean)
+make verify-contract         # SCHED001-003 vs fork source
+make demo-contribute-clean   # remove when done
 ```
 
 Default `make demo-contribute` **creates, proves, and deletes** (safe to run in CI / rehearsal). `KEEP=1` is the live “files appear” mode.
@@ -101,10 +112,10 @@ Default `make demo-contribute` **creates, proves, and deletes** (safe to run in 
 ## Timebox vs the rest of the 45 minutes
 
 - **0–5** problem (distributed conventions → review round-trips)
-- **5–8** `rules.yaml` → many surfaces (**not** a tool per SDLC step)
-- **8–12** **kit**: catch the bad fixture
+- **5–8** `rules.yaml` → many surfaces, including `owner:` tags (**not** a tool per SDLC step)
+- **8–12** **kit**: catch the bad fixture; `make grokbot ROLE=qa` (simulation)
 - **12–22** **fork**: source-ground → scaffold → file-scoped green gate
-- **22–30** QA + issue template + overlay CI vs inherited HF Actions
+- **22–30** QA + issue template + overlay CI (drift + contract re-verify) vs inherited HF Actions
 - **30–38** judgment (schedulers first, empty default MCP, no embeddings, no auto-fix, stop at CI)
 - **38–45** where it breaks + `make demo-maintain` on the kit if not already shown
 
@@ -119,3 +130,27 @@ python3 tools/demo_contribute.py --clean-only --name EulerLite
 ```
 
 Do not commit `scheduling_euler_lite.py` unless you explicitly want it as a fixture. The live point is **creating** it.
+
+---
+
+## Cloud `environment.json` dry-run (no fake deploy)
+
+Two files, two launch targets:
+
+| Launch on | File | What install does |
+|-----------|------|-------------------|
+| **This kit** | `.cursor/environment.json` | `pip install -r requirements.txt`; optional MCP launcher. Declares the fork as a repo dependency. |
+| **The fork** | `overlay/environment.json` (copied to fork `.cursor/environment.json` by `make attach`) | Clones this kit to `ramp-kit/` if missing; `pip install -r ramp-kit/requirements.txt`; `python3 ramp-kit/tools/docs_mcp_server.py --selftest`. Default fork `.cursor/mcp.json` is `{ "mcpServers": {} }`. |
+
+Dry-run locally (does not boot a Cloud VM):
+
+```bash
+python3 -c "import json; print(json.dumps(json.load(open('overlay/environment.json')), indent=2))"
+python3 -c "import json; print(json.dumps(json.load(open('.cursor/environment.json')), indent=2))"
+make attach TARGET=../diffusers   # copies empty mcp.json; does not touch AGENTS.md / .ai/
+python3 -c "import json; print(json.load(open('../diffusers/.cursor/mcp.json')))"
+# expected: {'mcpServers': {}}
+```
+
+If a Cloud Agent is already on the fork, the boot install is that JSON. You do not re-run attach live unless `.cursor/` is missing. Overlay clearance is still the file-scoped gate, not Hugging Face Actions.
+

@@ -15,13 +15,20 @@ from convention_check import check_file, load_rules  # noqa: E402
 
 
 class TestLibraryPaths(unittest.TestCase):
-    def test_kit_standin_is_library_root_without_docs_tree(self):
+    def test_kit_standin_or_adjacent_fork(self):
         from library_paths import KIT_ROOT, resolve_docs_root, resolve_library_root
 
-        self.assertEqual(resolve_library_root(), KIT_ROOT)
-        docs, provenance = resolve_docs_root()
-        self.assertIn("bundled snapshot", provenance)
-        self.assertTrue(docs.exists())
+        lib = resolve_library_root()
+        sibling = (KIT_ROOT.parent / "diffusers").resolve()
+        if (sibling / "docs" / "source" / "en").is_dir():
+            self.assertEqual(lib, sibling)
+            docs, provenance = resolve_docs_root()
+            self.assertIn("diffusers checkout", provenance)
+        else:
+            self.assertEqual(lib, KIT_ROOT)
+            docs, provenance = resolve_docs_root()
+            self.assertIn("bundled snapshot", provenance)
+            self.assertTrue(docs.exists())
 
     def test_env_docs_root_wins(self):
         from library_paths import resolve_docs_root
@@ -182,6 +189,225 @@ class TestTest001Mentions(unittest.TestCase):
             ids = {f.rule_id for f in findings}
             self.assertIn("TEST001", ids)
             self.assertTrue(any("does not exercise" in f.message for f in findings if f.rule_id == "TEST001"))
+
+
+class TestTest002Adequacy(unittest.TestCase):
+    def test_zero_assertion_function_is_flagged(self):
+        with tempfile.TemporaryDirectory() as td:
+            layout = Path(td) / "examples" / "foo"
+            layout.mkdir(parents=True)
+            target = layout / "scheduling_weak.py"
+            target.write_text(
+                "class WeakScheduler:\n    def step(self): ...\n    def set_timesteps(self): ...\n"
+            )
+            tests = Path(td) / "examples" / "tests"
+            tests.mkdir(parents=True)
+            (tests / "test_scheduling_weak.py").write_text(
+                "import unittest\n"
+                "class T(unittest.TestCase):\n"
+                "    def test_set_timesteps_and_step(self):\n"
+                "        pass  # mentions set_timesteps and step; zero assertions\n"
+            )
+            findings = check_file(target, load_rules())
+            t002 = [f for f in findings if f.rule_id == "TEST002"]
+            self.assertTrue(t002, findings)
+            self.assertTrue(
+                any("zero assertions" in f.message for f in t002),
+                t002,
+            )
+
+    def test_scaffolded_example_is_clean(self):
+        sched = ROOT / "examples" / "scaffolded_scheduler" / "scheduling_ddpm_lite.py"
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "convention_check.py"), str(sched)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("0 findings", proc.stdout)
+
+    def test_scaffolded_test_file_is_clean(self):
+        test = ROOT / "tests" / "schedulers" / "test_scheduling_ddpm_lite.py"
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "convention_check.py"), str(test)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+
+class TestOwnersAndProjections(unittest.TestCase):
+    def test_every_rule_has_owner(self):
+        import yaml
+
+        data = yaml.safe_load((ROOT / "conventions" / "rules.yaml").read_text())
+        allowed = {"dev", "architect", "qa", "pm", "devops"}
+        missing = [r["id"] for r in data["rules"] if r.get("owner") not in allowed]
+        self.assertEqual(missing, [])
+
+    def test_projections_mention_owners(self):
+        pm = (ROOT / "projections" / "pm" / "definition-of-done.md").read_text()
+        qa = (ROOT / "projections" / "qa" / "review-checklist.md").read_text()
+        devops = (ROOT / "projections" / "devops" / "ci-gate.md").read_text()
+        self.assertIn("owner: `qa`", pm)
+        self.assertIn("### `pm`", pm)
+        self.assertIn("owner: qa", qa)
+        self.assertIn("owner", devops)
+        self.assertIn("Projection drift", devops)
+
+
+class TestGrokbotSim(unittest.TestCase):
+    def test_qa_risk_briefing_from_sample_gate(self):
+        proc_gate = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "convention_check.py"),
+             "--json", str(ROOT / "examples" / "candidate_scheduler")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertIn('"findings"', proc_gate.stdout)
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "grokbot_sim.py"), "--role", "qa"],
+            cwd=ROOT,
+            input=proc_gate.stdout,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        out = proc.stdout
+        self.assertIn("SIMULATION", out)
+        self.assertIn("RISK BRIEFING", out)
+        self.assertIn("QA-owned", out)
+        self.assertIn("Does not gate", out)
+
+
+class TestSchedulerContractVerify(unittest.TestCase):
+    def test_passes_against_fork_or_skips_kit_standin(self):
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "verify_scheduler_contract.py")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        self.assertTrue("OK" in proc.stdout or "SKIP" in proc.stdout)
+
+    def test_reports_drift_when_required_method_renamed(self):
+        from library_paths import resolve_library_root
+
+        lib = resolve_library_root()
+        src = lib / "src" / "diffusers" / "schedulers" / "scheduling_ddpm.py"
+        euler = lib / "src" / "diffusers" / "schedulers" / "scheduling_euler_discrete.py"
+        if not src.is_file() or not euler.is_file():
+            self.skipTest("fork reference schedulers not attached")
+        with tempfile.TemporaryDirectory() as td:
+            fake = Path(td)
+            dest = fake / "src" / "diffusers" / "schedulers"
+            dest.mkdir(parents=True)
+            dest.joinpath("scheduling_ddpm.py").write_text(
+                src.read_text(encoding="utf-8").replace("def set_timesteps", "def set_num_inference_steps", 1)
+            )
+            dest.joinpath("scheduling_euler_discrete.py").write_text(
+                euler.read_text(encoding="utf-8")
+            )
+            proc = subprocess.run(
+                [sys.executable, str(ROOT / "tools" / "verify_scheduler_contract.py"),
+                 "--library", str(fake)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(proc.returncode, 0, proc.stdout)
+            self.assertIn("DRIFT", proc.stderr)
+            self.assertIn("set_timesteps", proc.stderr)
+
+
+class TestProjectionDrift(unittest.TestCase):
+    def test_hand_edit_then_rebuild_diff_is_red(self):
+        mdc = ROOT / ".cursor" / "rules" / "00-conventions.mdc"
+        original = mdc.read_text()
+
+        def restore():
+            mdc.write_text(original)
+            subprocess.run(["git", "checkout", "--", str(mdc)], cwd=ROOT, check=False,
+                           capture_output=True)
+
+        self.addCleanup(restore)
+        mdc.write_text(original + "\n<!-- hand-edit should fail drift -->\n")
+        subprocess.run(["git", "add", "--", str(mdc)], cwd=ROOT, check=True, capture_output=True)
+        try:
+            subprocess.run(
+                [sys.executable, str(ROOT / "tools" / "build_projections.py")],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            diff = subprocess.run(
+                ["git", "diff", "--exit-code", "--", ".cursor/rules", "AGENTS.md",
+                 "projections", ".github/workflows", "agents"],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(diff.returncode, 0, "hand-edited generated file must fail drift")
+        finally:
+            subprocess.run(["git", "reset", "HEAD", "--", str(mdc)], cwd=ROOT,
+                           capture_output=True)
+            subprocess.run(["git", "checkout", "--", str(mdc)], cwd=ROOT, capture_output=True)
+
+    def test_rebuild_is_idempotent(self):
+        paths = [
+            ROOT / ".cursor" / "rules" / "00-conventions.mdc",
+            ROOT / "AGENTS.md",
+            ROOT / "projections" / "pm" / "definition-of-done.md",
+            ROOT / "agents" / "grokbot-qa.md",
+        ]
+        subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "build_projections.py")],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+        )
+        before = {p: p.read_text() for p in paths if p.exists()}
+        self.assertIn(ROOT / "agents" / "grokbot-qa.md", before)
+        subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "build_projections.py")],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+        )
+        after = {p: p.read_text() for p in paths if p.exists()}
+        self.assertEqual(before, after)
+
+
+class TestAttachEmptyMcp(unittest.TestCase):
+    def test_attach_writes_empty_mcp_servers(self):
+        with tempfile.TemporaryDirectory() as td:
+            fake = Path(td) / "diffusers"
+            (fake / "src" / "diffusers" / "schedulers").mkdir(parents=True)
+            (fake / ".gitignore").write_text("# Cursor\n.cursor\n")
+            proc = subprocess.run(
+                [sys.executable, str(ROOT / "tools" / "attach_library.py"),
+                 "--target", str(fake)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+            cfg = json.loads((fake / ".cursor" / "mcp.json").read_text())
+            self.assertEqual(cfg.get("mcpServers"), {})
+            self.assertTrue((fake / ".cursor" / "mcp.optional.json").is_file())
+            self.assertNotIn("AGENTS.md", [p.name for p in fake.iterdir()])
 
 
 class TestDemoContribute(unittest.TestCase):

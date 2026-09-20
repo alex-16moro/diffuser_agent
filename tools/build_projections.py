@@ -41,6 +41,27 @@ COMPONENTS = META.get("components", {})
 
 BANNER = "<!-- GENERATED from conventions/rules.yaml by tools/build_projections.py. DO NOT EDIT. Run `make build`. -->"
 BANNER_HASH = "# GENERATED from conventions/rules.yaml by tools/build_projections.py. DO NOT EDIT. Run `make build`."
+ALLOWED_OWNERS = ("dev", "architect", "qa", "pm", "devops")
+GROKBOT_ROLES = {
+    "pm": {
+        "title": "PM status digest",
+        "job": "Turn the gate/CI output for this change into a ship/no-ship status digest a PM can read in one minute.",
+        "reads": "convention_check --json, CI conclusion, the issue/PR change record, owner=pm rows in the registry.",
+        "output": "status digest: blocking count, DoD items still open, whether the change is merge-eligible.",
+    },
+    "qa": {
+        "title": "QA risk briefing",
+        "job": "Turn the gate/CI output for this change into a risk briefing: what is machine-blocked, what tests are weak, what still needs a human.",
+        "reads": "convention_check --json, CI conclusion, the change record, owner=qa rows in the registry.",
+        "output": "risk briefing: QA-owned blocking findings first, other blocks, residual human-only risk (math, duplication).",
+    },
+    "devops": {
+        "title": "DevOps health signal",
+        "job": "Turn the gate/CI output for this change into a health/signal: will CI stay green, did generated surfaces drift, is the overlay still attachable.",
+        "reads": "convention_check --json, CI conclusion (including projection-drift and contract re-verify), owner=devops rows in the registry.",
+        "output": "health/signal: exit code, drift, contract re-verify, device/CI blockers.",
+    },
+}
 
 
 def _by_sev(sev, rules=None):
@@ -57,6 +78,14 @@ def _customer():
 
 def _by_component(comp):
     return [r for r in R if r.get("component", "any") == comp]
+
+
+def _by_owner(owner):
+    return [r for r in R if r.get("owner") == owner]
+
+
+def _owner_tag(r):
+    return r.get("owner", "unassigned")
 
 
 def _component_globs(comp):
@@ -137,7 +166,7 @@ def build_cursor_component(comp: str):
         "",
     ]
     for r in rules:
-        lines.append(f"### {r['id']} — {r['title']}  ({r['severity']})")
+        lines.append(f"### {r['id']} — {r['title']}  ({r['severity']}, owner: {_owner_tag(r)})")
         lines.append(r["rationale"].strip())
         lines.append(f"*How:* {r['agent_hint']}")
         lines.append("")
@@ -171,7 +200,9 @@ def build_agents_md():
     for r in _upstream():
         tag = "MUST" if r["severity"] == "block" else "SHOULD"
         comp = r.get("component", "any")
-        lines.append(f"- **[{tag}] {r['id']} {r['title']}** ({comp}) — {r['agent_hint']} (source: {r['source']})")
+        lines.append(
+            f"- **[{tag}] {r['id']} {r['title']}** ({comp}, owner: {r.get('owner', '?')}) — {r['agent_hint']} (source: {r['source']})"
+        )
     cust = _customer()
     if cust:
         lines.append("")
@@ -179,7 +210,7 @@ def build_agents_md():
         for r in cust:
             tag = "MUST" if r["severity"] == "block" else "SHOULD"
             comp = r.get("component", "any")
-            lines.append(f"- **[{tag}] {r['id']} {r['title']}** ({comp}) — {r['agent_hint']} (source: {r['source']})")
+            lines.append(f"- **[{tag}] {r['id']} {r['title']}** ({comp}, owner: {r.get('owner', '?')}) — {r['agent_hint']} (source: {r['source']})")
     comp_list = ", ".join(f"`/scaffold {c} <Name>`" for c in COMPONENTS) or "(none configured)"
     lines.extend([
         "",
@@ -206,16 +237,29 @@ def build_pm_dod():
         "## Correctness & conventions (auto-verified by `make check`)",
     ]
     for r in _by_sev("block"):
-        lines.append(f"- [ ] **{r['title']}** — {r['dod']} `[{r['id']}]`")
+        lines.append(f"- [ ] **{r['title']}** — {r['dod']} `[{r['id']}]` · owner: `{_owner_tag(r)}`")
     lines.append("")
     lines.append("## Quality (advisory, reviewer confirms)")
     for r in _by_sev("warn"):
-        lines.append(f"- [ ] {r['dod']} `[{r['id']}]`")
+        lines.append(f"- [ ] {r['dod']} `[{r['id']}]` · owner: `{_owner_tag(r)}`")
     lines.extend([
         "", "## Lifecycle (manual)",
         "- [ ] Coordinated on an issue before the PR (per AI-contribution policy)",
         "- [ ] PR description lists the test commands run and their output",
         "- [ ] Green CI (the convention gate + test suite) before merge", "",
+        "## Owners (same registry, role-filtered view)",
+        "Each rule has a single `owner` in `conventions/rules.yaml`. Roles co-author one list; they do not get a second source of truth.",
+        "",
+    ])
+    for owner in ALLOWED_OWNERS:
+        owned = _by_owner(owner)
+        if not owned:
+            continue
+        lines.append(f"### `{owner}`")
+        for r in owned:
+            lines.append(f"- `{r['id']}` {r['title']}")
+        lines.append("")
+    lines.extend([
         "> Impact: every item above maps to a specific ramp mistake or review",
         "> round-trip. Shipping this closes the loop between \"first commit\" and",
         "> \"safely deployed\" without a human re-teaching the conventions each time.", "",
@@ -233,12 +277,12 @@ def build_qa_checklist():
         "## Trust the gate (already enforced, do not re-check by hand)",
     ]
     for r in _by_sev("block"):
-        lines.append(f"- `{r['id']}` {r['review_prompt']}")
+        lines.append(f"- `{r['id']}` {r['review_prompt']} _(owner: {_owner_tag(r)})_")
     lines.append("")
     lines.append("## Use your judgment (advisory / not fully automatable)")
     for r in _by_sev("warn"):
         tier = " _(customer guardrail)_" if r.get("source_type") == "customer" else ""
-        lines.append(f"- `{r['id']}` {r['review_prompt']}{tier}")
+        lines.append(f"- `{r['id']}` {r['review_prompt']}{tier} _(owner: {_owner_tag(r)})_")
     lines.extend([
         "", "## Beyond the gate (human-only)",
         "- Is the numerical method actually correct vs. the paper?",
@@ -268,6 +312,10 @@ def _ci_gate_yml():
         "      - run: pip install -r requirements.txt",
         "      - name: Convention gate",
         "        run: python tools/convention_check.py --all",
+        "      - name: Projection drift",
+        "        run: python tools/build_projections.py && git diff --exit-code",
+        "      - name: Scheduler contract re-verify",
+        "        run: python tools/verify_scheduler_contract.py",
         "      - name: MCP doc-server self-test",
         "        run: python tools/docs_mcp_server.py --selftest",
         "      - name: Contract tests",
@@ -302,8 +350,19 @@ def build_devops():
         "- No GPU, no model downloads, no network — runs on the cheapest runner.",
         "- Same script runs in the editor hook and pre-PR, so CI surprises are rare.",
         "- Green gate = merge-eligible (release clearance). This kit does not",
-        "  deploy; it is the check that a change is allowed to move toward release.", "",
+        "  deploy; it is the check that a change is allowed to move toward release.",
+        "- **Projection drift:** `python tools/build_projections.py && git diff --exit-code`",
+        "  fails if a generated surface was hand-edited instead of `rules.yaml`.",
+        "- **Scheduler contract re-verify:** `python tools/verify_scheduler_contract.py`",
+        "  fails if fork reference source drifted from SCHED001–003.",
+        "- Rules carry an `owner` tag (`dev` / `architect` / `qa` / `pm` / `devops`).",
+        "  GrokBot role-agents translate gate JSON for that owner; they never gate.",
+        "",
+        "## Owner-tagged rules (devops)",
     ]
+    for r in _by_owner("devops"):
+        md.append(f"- `{r['id']}` {r['title']} ({r['severity']})")
+    md.append("")
     write(ROOT / "projections" / "devops" / "ci-gate.md", "\n".join(md))
     yml = _ci_gate_yml()
     write(ROOT / "projections" / "devops" / "ci-gate.yml", yml)
@@ -322,7 +381,7 @@ def build_github_templates():
         "",
     ]
     for r in _by_sev("block"):
-        pr.append(f"- [ ] `{r['id']}` {r['title']} — {r['dod']}")
+        pr.append(f"- [ ] `{r['id']}` {r['title']} — {r['dod']} _(owner: {_owner_tag(r)})_")
     pr.extend([
         "",
         "## Tests run",
@@ -351,7 +410,7 @@ def build_github_templates():
         "## Definition of Done (blocking — `make check`)",
     ]
     for r in _by_sev("block"):
-        issue.append(f"- [ ] {r['dod']} `{r['id']}`")
+        issue.append(f"- [ ] {r['dod']} `{r['id']}` _(owner: {_owner_tag(r)})_")
     issue.extend([
         "",
         "## Out of scope for the gate (human)",
@@ -363,6 +422,53 @@ def build_github_templates():
         "",
     ])
     write(ROOT / ".github" / "ISSUE_TEMPLATE" / "contribution.md", "\n".join(issue))
+
+
+def build_grokbot_specs():
+    """READ-side role agents. Prompt body is the owner-tagged rules; they never gate."""
+    for role, spec in GROKBOT_ROLES.items():
+        owned = _by_owner(role)
+        lines = [
+            BANNER, "",
+            f"# GrokBot {role.upper()} — {spec['title']}",
+            "",
+            "> **Simulation / read-side view.** This agent TRANSLATES gate and CI",
+            "> output. It never decides, never fails a job, never merges.",
+            "",
+            "## Job",
+            spec["job"],
+            "",
+            "## Reads (inputs)",
+            spec["reads"],
+            "",
+            "## Output shape",
+            spec["output"],
+            "",
+            "## Prompt (generated from `conventions/rules.yaml` where `owner:` is "
+            f"`{role}`)",
+            "",
+        ]
+        if not owned:
+            lines.append("_No rules tagged for this owner in the registry._")
+            lines.append("")
+        for r in owned:
+            tag = r["severity"].upper()
+            lines.append(f"### {r['id']} [{tag}] — {r['title']}")
+            lines.append(r["rationale"].strip())
+            lines.append(f"- Review: {r['review_prompt']}")
+            lines.append(f"- Done: {r['dod']}")
+            lines.append("")
+        lines.extend([
+            "## How to run the simulation",
+            "",
+            "```bash",
+            f"python tools/convention_check.py --json examples/candidate_scheduler "
+            f"> /tmp/gate.json || true",
+            f"python tools/grokbot_sim.py --role {role} < /tmp/gate.json",
+            "```",
+            "",
+        ])
+        write(ROOT / "agents" / f"grokbot-{role}.md", "\n".join(lines))
 
 
 def validate_sync():
@@ -380,7 +486,16 @@ def validate_sync():
     for c in COMPONENTS:
         if c not in tagged:
             sys.stderr.write(f"WARNING: component '{c}' has no rules tagged for it\n")
-    print(f"  sync OK: {len(R)} rules, all checks implemented; components: {sorted(tagged)}")
+    missing_owner = [r["id"] for r in R if r.get("owner") not in ALLOWED_OWNERS]
+    if missing_owner:
+        sys.stderr.write(
+            f"ERROR: rules missing valid owner {ALLOWED_OWNERS}: {missing_owner}\n"
+        )
+        sys.exit(1)
+    print(
+        f"  sync OK: {len(R)} rules, all checks implemented, all owners set; "
+        f"components: {sorted(tagged)}"
+    )
 
 
 def main():
@@ -394,6 +509,7 @@ def main():
     build_qa_checklist()
     build_devops()
     build_github_templates()
+    build_grokbot_specs()
     print("Done. Humans edit ONLY conventions/rules.yaml; everything above is generated.")
 
 

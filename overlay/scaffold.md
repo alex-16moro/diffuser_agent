@@ -41,7 +41,8 @@ Cite provenance if you run that. Do not read or copy
 ## 3. TEST001
 
 Copy `ramp-kit/tests/_templates/scheduler_test.py`. Set `TARGET` and `CLASS`.
-The test must mention `set_timesteps` and `step`.
+The test must mention `set_timesteps` and `step`, and (TEST002) include
+assertions, same-seed determinism, and shape/dtype checks.
 
 ## 4. Gate (file-scoped — do not `--all` this library)
 

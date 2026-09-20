@@ -19,3 +19,14 @@ python tools/convention_check.py --all   # human-readable, sets exit code
 - Same script runs in the editor hook and pre-PR, so CI surprises are rare.
 - Green gate = merge-eligible (release clearance). This kit does not
   deploy; it is the check that a change is allowed to move toward release.
+- **Projection drift:** `python tools/build_projections.py && git diff --exit-code`
+  fails if a generated surface was hand-edited instead of `rules.yaml`.
+- **Scheduler contract re-verify:** `python tools/verify_scheduler_contract.py`
+  fails if fork reference source drifted from SCHED001–003.
+- Rules carry an `owner` tag (`dev` / `architect` / `qa` / `pm` / `devops`).
+  GrokBot role-agents translate gate JSON for that owner; they never gate.
+
+## Owner-tagged rules (devops)
+- `DEVICE001` No hardcoded CUDA/device placement (block)
+- `LOG001` Library code logs, it does not print() (warn)
+- `CUST001` No debugging leftovers committed (warn)

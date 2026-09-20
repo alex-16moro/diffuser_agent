@@ -293,21 +293,68 @@ def check_copied_from_wellformed(rule, path, rel, source, tree):
     return out
 
 
-def check_test_presence(rule, path, rel, source, tree):
-    """Repo-level: a new scheduler file must have a matching contract test."""
-    out = []
+def _companion_test_candidates(rel: str, path: Path, glob: str) -> list[Path]:
     stem = Path(rel).stem  # scheduling_foo
-    glob = rule.params.get("test_glob", "tests/schedulers/test_{stem}.py")
     expected = glob.format(stem=stem)
-    # Look both in the real repo layout and next to an example.
-    candidates = [
+    return [
         LIBRARY_ROOT / expected,
         REPO_ROOT / expected,
         Path(path).parent.parent / "tests" / f"test_{stem}.py",
         LIBRARY_ROOT / "tests" / f"test_{stem}.py",
         REPO_ROOT / "tests" / f"test_{stem}.py",
     ]
-    found = next((c for c in candidates if c.exists()), None)
+
+
+def _shown_path(found: Path) -> str:
+    for root in (LIBRARY_ROOT, REPO_ROOT):
+        try:
+            return str(found.resolve().relative_to(root))
+        except ValueError:
+            continue
+    return str(found)
+
+
+def _is_test_path(rel: str) -> bool:
+    name = Path(rel).name
+    return name.startswith("test_") and name.endswith(".py")
+
+
+def _test_functions(tree: ast.AST):
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
+            yield node
+
+
+def _call_name(node: ast.Call) -> str:
+    if isinstance(node.func, ast.Attribute):
+        return node.func.attr
+    if isinstance(node.func, ast.Name):
+        return node.func.id
+    return ""
+
+
+def _function_has_assertion(fn: ast.AST) -> bool:
+    """True if the function contains an assert statement or unittest/pytest assertion call."""
+    for node in ast.walk(fn):
+        if isinstance(node, ast.Assert):
+            return True
+        if isinstance(node, ast.Call):
+            name = _call_name(node)
+            if name.startswith("assert") or name in {"raises", "warns"}:
+                return True
+        if isinstance(node, ast.withitem) and isinstance(node.context_expr, ast.Call):
+            name = _call_name(node.context_expr)
+            if name.startswith("assert") or name in {"raises", "warns"}:
+                return True
+    return False
+
+
+def check_test_presence(rule, path, rel, source, tree):
+    """Repo-level: a new scheduler file must have a matching contract test."""
+    out = []
+    glob = rule.params.get("test_glob", "tests/schedulers/test_{stem}.py")
+    expected = glob.format(stem=Path(rel).stem)
+    found = next((c for c in _companion_test_candidates(rel, path, glob) if c.exists()), None)
     if found is None:
         out.append(Finding(
             rule.id, rule.severity, rel, 1,
@@ -319,18 +366,83 @@ def check_test_presence(rule, path, rel, source, tree):
     text = found.read_text(encoding="utf-8", errors="replace")
     missing = [m for m in mentions if not re.search(rf"\b{re.escape(m)}\b", text)]
     if missing:
-        shown = str(found)
-        for root in (LIBRARY_ROOT, REPO_ROOT):
-            try:
-                shown = str(found.resolve().relative_to(root))
-                break
-            except ValueError:
-                continue
         out.append(Finding(
             rule.id, rule.severity, rel, 1,
-            f"{shown} exists but does not exercise {', '.join(missing)}",
+            f"{_shown_path(found)} exists but does not exercise {', '.join(missing)}",
             "Assert the scheduler contract methods in the test (see tests/_templates/scheduler_test.py).",
         ))
+    return out
+
+
+def check_test_adequacy(rule, path, rel, source, tree):
+    """Weak-test detection: empty test_* functions, plus scheduler determinism/shape/dtype."""
+    out = []
+    glob = rule.params.get("test_glob", "tests/schedulers/test_{stem}.py")
+    if _is_test_path(rel):
+        test_path, test_rel, test_source = path, rel, source
+        test_tree = tree
+        if test_tree is None:
+            try:
+                test_tree = ast.parse(test_source, filename=str(path))
+            except SyntaxError as e:
+                out.append(Finding(
+                    rule.id, rule.severity, rel, e.lineno or 1,
+                    f"test file does not parse: {e.msg}",
+                    "Fix the syntax error first.",
+                ))
+                return out
+    else:
+        found = next((c for c in _companion_test_candidates(rel, path, glob) if c.exists()), None)
+        if found is None:
+            return out  # TEST001 already flags a missing file
+        test_path = found
+        test_rel = _shown_path(found)
+        test_source = found.read_text(encoding="utf-8", errors="replace")
+        try:
+            test_tree = ast.parse(test_source, filename=str(found))
+        except SyntaxError as e:
+            out.append(Finding(
+                rule.id, rule.severity, test_rel, e.lineno or 1,
+                f"test file does not parse: {e.msg}",
+                "Fix the syntax error in the companion test.",
+            ))
+            return out
+
+    if rule.params.get("require_assertions", True):
+        test_fns = list(_test_functions(test_tree) if test_tree is not None else [])
+        if not test_fns:
+            out.append(Finding(
+                rule.id, rule.severity, test_rel, 1,
+                f"{Path(test_rel).name} has no test_* functions with assertions",
+                rule.agent_hint,
+            ))
+        for fn in test_fns:
+            if not _function_has_assertion(fn):
+                out.append(Finding(
+                    rule.id, rule.severity, test_rel, fn.lineno,
+                    f"test function {fn.name}() has zero assertions",
+                    rule.agent_hint,
+                ))
+
+    if rule.params.get("require_determinism"):
+        det = re.search(r"torch\.equal|same_seed|same seed", test_source, re.IGNORECASE)
+        if not det:
+            out.append(Finding(
+                rule.id, rule.severity, test_rel, 1,
+                "scheduler test has no same-seed determinism assertion (torch.equal / same seed)",
+                "Add test_same_seed_same_output using torch.equal on two seeded step() calls.",
+            ))
+
+    if rule.params.get("require_shape_dtype"):
+        has_shape = re.search(r"\bshape\b", test_source) is not None
+        has_dtype = re.search(r"\bdtype\b", test_source) is not None
+        missing = [n for n, ok in (("shape", has_shape), ("dtype", has_dtype)) if not ok]
+        if missing:
+            out.append(Finding(
+                rule.id, rule.severity, test_rel, 1,
+                f"scheduler test is missing { ' and '.join(missing) } assertion(s)",
+                "Assert prev_sample.shape and prev_sample.dtype against the input sample.",
+            ))
     return out
 
 
@@ -345,6 +457,7 @@ CHECKS: dict[str, Callable] = {
     "deprecation_map": check_deprecation_map,
     "copied_from_wellformed": check_copied_from_wellformed,
     "test_presence": check_test_presence,
+    "test_adequacy": check_test_adequacy,
 }
 
 AST_CHECKS = {

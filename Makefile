@@ -3,7 +3,7 @@
 
 PYTHON ?= python3
 
-.PHONY: help doctor build check check-json test mcp demo demo-contribute demo-contribute-clean demo-maintain attach clean
+.PHONY: help doctor build check check-json test mcp demo demo-contribute demo-contribute-clean demo-maintain grokbot verify-contract drift attach clean
 
 help:
 	@echo "diffusers Ramp Kit"
@@ -17,6 +17,9 @@ help:
 	@echo "  make demo-contribute  First-contribution journey (KEEP=1 leaves files)"
 	@echo "  make demo-contribute-clean  Remove the EulerLite contribution files"
 	@echo "  make demo-maintain  Prove req #4: add a rule, rebuild, watch it propagate"
+	@echo "  make grokbot    Simulate a GrokBot role briefing from sample gate JSON (ROLE=qa)"
+	@echo "  make verify-contract  Re-check SCHED001-003 against fork reference source"
+	@echo "  make drift      Rebuild projections and fail if generated files were hand-edited"
 	@echo "  make attach     Copy overlay Cursor files into a diffusers checkout (TARGET=../diffusers)"
 	@echo "  make clean      Remove generated projections"
 
@@ -36,6 +39,8 @@ doctor:
 	@$(PYTHON) -c "import json, pathlib; s=json.loads(pathlib.Path('overlay/mcp.optional.json').read_text())['mcpServers']; assert 'diffusers-docs' in s and 'huggingface' in s, s" \
 		|| (echo "overlay/mcp.optional.json must list opt-in servers"; exit 1)
 	@$(PYTHON) tools/docs_mcp_server.py --selftest >/dev/null
+	@test -f tools/grokbot_sim.py && test -f tools/verify_scheduler_contract.py \
+		|| (echo "Missing GrokBot / contract-verify tooling"; exit 1)
 	@echo "doctor OK: $(PYTHON) + PyYAML + Cursor files + MCP self-test + overlay"
 
 attach:
@@ -49,6 +54,18 @@ check:
 
 check-json:
 	$(PYTHON) tools/convention_check.py --all --json
+
+grokbot:
+	@$(PYTHON) tools/convention_check.py --json examples/candidate_scheduler > /tmp/ramp-kit-gate.json || true
+	$(PYTHON) tools/grokbot_sim.py --role $(or $(ROLE),qa) /tmp/ramp-kit-gate.json
+
+verify-contract:
+	$(PYTHON) tools/verify_scheduler_contract.py $(if $(LIBRARY),--library $(LIBRARY),)
+
+drift:
+	$(PYTHON) tools/build_projections.py
+	git diff --exit-code -- .cursor/rules AGENTS.md projections .github/workflows \
+		.github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE agents
 
 test:
 	$(PYTHON) -m unittest discover -s tests -t . -v
@@ -68,6 +85,11 @@ demo:
 	$(PYTHON) tools/docs_mcp_server.py --selftest
 	@echo "\n========== 4. Contract tests (zero install) =========="
 	$(PYTHON) -m unittest discover -s tests -t . -v
+	@echo "\n========== 5. GrokBot QA simulation (read-side, does not gate) =========="
+	@$(PYTHON) tools/convention_check.py --json examples/candidate_scheduler > /tmp/ramp-kit-gate.json || true
+	$(PYTHON) tools/grokbot_sim.py --role qa /tmp/ramp-kit-gate.json
+	@echo "\n========== 6. Scheduler contract vs fork source =========="
+	$(PYTHON) tools/verify_scheduler_contract.py
 
 # Full contribution journey (plan → ground → scaffold → gate → test → CI).
 # Default: create, prove, delete (safe rehearsal / CI).
@@ -87,10 +109,11 @@ demo-maintain:
 	@$(PYTHON) tools/build_projections.py >/dev/null
 	@echo "\nSurfaces that changed from a SINGLE registry edit:"
 	@git status --short .cursor/rules AGENTS.md projections conventions/rules.yaml \
-		.github/workflows .github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE || true
+		.github/workflows .github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE agents || true
 	@echo "\nRestoring original state ..."
 	@git checkout -- conventions/rules.yaml .cursor/rules AGENTS.md projections \
-		.github/workflows .github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE 2>/dev/null || true
+		.github/workflows .github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE
+	@git checkout -- agents 2>/dev/null || true
 	@$(PYTHON) tools/build_projections.py >/dev/null
 	@echo "Done. One edit -> agent rules + AGENTS.md + PM DoD + QA + CI all updated."
 

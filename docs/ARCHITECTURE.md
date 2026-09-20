@@ -19,13 +19,18 @@ validator catches drift, instead of trusting docs or memory.
 
 ```
 rules.yaml ──build_projections.py──> agent rules, AGENTS.md, PM DoD,
-     │                                QA checklist, DevOps CI gate
+     │                                QA checklist, DevOps CI gate,
+     │                                GrokBot specs (read-side, never gate)
      └────────convention_check.py───> the runnable gate (editor / pre-PR / CI)
 ```
 
 `build_projections.py` refuses to run if a rule declares a `check` that isn't
-implemented in `convention_check.py`. So you can't document a convention you
-don't enforce — the two halves are pinned together.
+implemented in `convention_check.py`, or if a rule is missing a valid `owner`
+(`dev` / `architect` / `qa` / `pm` / `devops`). Owner tags are the
+multi-audience mechanism: roles co-author one registry; GrokBot translates
+gate JSON for a role. CI also rebuilds projections and `git diff --exit-code`
+(hand-edits of generated files fail) and re-verifies SCHED001–003 against
+fork source (`tools/verify_scheduler_contract.py`).
 
 ## Why these tools (reasoning from how they actually work)
 
@@ -55,7 +60,7 @@ registry is component-agnostic; adding a `models.md` rule set is additive.
 | Design | Conventions + reference scheduler; scaffold command encodes the shape |
 | Build | Agent rules + `/scaffold <component> <Name>` produce a correct first cut |
 | Review | Gate blocks the machine-checkable items; QA checklist focuses humans on judgment |
-| Test | Generated contract test (structural + behavioral); TEST001 blocks schedulers that ship without one |
+| Test | Generated contract test (structural + behavioral); TEST001 requires the file; TEST002 requires assertions, same-seed determinism, and shape/dtype |
 | CI / Release gate | Identical gate in `.github/workflows/convention-gate.yml` + MCP self-test + tests; `.cursorignore` keeps changes in the agent's context boundary. Green gate = merge-eligible (release clearance). I stop here — no customer deploy env or auth model, so I don't fake "deploy". |
 
 ## Failure modes I designed around
