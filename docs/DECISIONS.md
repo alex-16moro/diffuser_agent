@@ -11,10 +11,11 @@ These were made before this submission pass. Do not silently reopen them.
    pm | devops` so roles co-author one list. Multiplicity of workers is fine;
    multiplicity of sources of truth is not.
 
-3. **GrokBot is read-side.** Per-audience agents translate `convention_check
-   --json` and CI. They never gate. `tools/grokbot_sim.py` is the reproducible
-   CLI briefing. The Grok Bot iPhone/desktop app is wired by pasting
-   generated profiles (`make grokbot-pack`); there is no Bot-from-git API.
+3. **GrokBot is read-side.** Per-audience agents brief a first-contribution
+   PR (QA testing risk, PM timeline/dependencies, DevOps CI/CD). They never
+   gate. The **repo spec** (`agents/grokbot-*.md`) wins; Edit Profile is a
+   stub. Trigger: PR opened / updated, not merge. Optional DevOps-only
+   follow-up on merge (landed-on-main note).
 
 4. **Gate is file-scoped on the library fork.** Never `convention_check.py --all`
    on the full diffusers tree.

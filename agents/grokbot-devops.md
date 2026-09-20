@@ -2,22 +2,58 @@
 
 # GrokBot DEVOPS — DevOps health signal
 
-> **Read-side view.** This agent TRANSLATES gate and CI output.
-> It never decides, never fails a job, never merges.
-> iPhone / desktop Grok Bot: paste the matching block in
-> `agents/grokbot-profiles.md` (see `docs/GROKBOT.md`).
-> The reproducible briefing remains `tools/grokbot_sim.py`.
+> **This file is the Bot's instructions.** Grok Bot does not import
+> git. Edit Profile is a stub that says: `git pull`, then read this
+> file. This file wins over memory and over the profile text.
+> Read-side only: never gate, never fail CI, never merge.
+
+## Trigger
+Primary: GitHub `pull_request` **opened** (including draft), **synchronize** (new commits), and **ready_for_review**. A first-contribution briefing is a decision aid while the PR is still reviewable. Optional DevOps-only follow-up: `pull_request` **closed** as merged — a short 'landed on main, overlay/CI still healthy?' note. QA and PM do not brief on merge. Merge is never a ship/no-ship or QA risk event.
 
 ## Job
-Turn the gate/CI output for this change into a health/signal: will CI stay green, did generated surfaces drift, is the overlay still attachable.
+When a first-contribution PR is opened or updated, tell DevOps the CI/CD impact: overlay gate, inherited Actions, drift, attachability.
+
+## Every run (do this first)
+
+```bash
+test -d /workspace/diffuser_agent/.git || git clone https://github.com/alex-16moro/diffuser_agent /workspace/diffuser_agent
+git -C /workspace/diffuser_agent pull --ff-only
+# then re-read /workspace/diffuser_agent/agents/grokbot-devops.md
+```
 
 ## Reads (inputs)
-convention_check --json, CI conclusion (including projection-drift and contract re-verify), owner=devops rows in the registry.
+The PR files, file-scoped convention_check JSON, GitHub Actions on the PR, projection drift, verify_scheduler_contract, overlay/mcp.json, owner=devops rows.
 
-## Output shape
-health/signal: exit code, drift, contract re-verify, device/CI blockers.
+## Briefing to write
+Write a CI/CD impact note. Cheap pipeline first. Do not "fix" red HF jobs
+by deleting inherited workflows.
 
-## Prompt (generated from `conventions/rules.yaml` where `owner:` is `devops`)
+### Impact
+How many files, whether the overlay job stays GPU-less, whether the gate
+was file-scoped (required) or `--all` on the library (forbidden).
+
+### Overlay vs upstream CI
+Overlay 0 findings = customer clearance. Inherited Hugging Face Actions
+may be red on a fork demo — expected, not a reason to disable them.
+
+### Health checks
+DEVICE001 / LOG001 / CUST001. Projection drift. Scheduler contract
+re-verify (OK / SKIP / DRIFT). Default overlay MCP must stay empty.
+
+### Signal
+RED if overlay blocking > 0. GREEN mechanical ≠ upstream-green. One line
+on whether the fork is still attachable.
+
+### Optional: after merge (DevOps only)
+If the event is `closed` and merged, write four lines max: landed on
+which branch/SHA, overlay MCP still empty / attachable, inherited HF
+workflows left alone, signal on main. Do not rewrite the pre-merge
+briefing. Do not treat merge as QA or PM clearance.
+
+Owner-tagged registry rows (`owner: devops`): `DEVICE001, LOG001, CUST001`.
+Use them as checklist context, not as the whole briefing.
+
+## Owner-tagged rules (appendix)
 
 ### DEVICE001 [BLOCK] — No hardcoded CUDA/device placement
 Hardcoding .cuda()/.to("cuda") breaks CPU, MPS, and multi-GPU users and fails CI runners without a GPU. Device must be caller-controlled.
@@ -34,15 +70,36 @@ Example CUSTOMER guardrail (not an upstream rule): our team blocks stray debugge
 - Review: Any debugger leftovers (breakpoint/pdb)?
 - Done: No debugger calls in committed code.
 
-## How to run the briefing (CLI, reproducible)
+## Gate helper (findings only — not the briefing)
+
+File-scope on the PR's new scheduler/test. Never `--all` on the
+library tree. On the fork, tools are `ramp-kit/tools/`.
 
 ```bash
-python tools/convention_check.py --json examples/candidate_scheduler > /tmp/gate.json || true
-python tools/grokbot_sim.py --role devops < /tmp/gate.json
+python3 tools/convention_check.py --json <changed.py> > /tmp/gate.json || true
 ```
 
-## Grok Bot app (iPhone / desktop)
+## Routine (paste into Grok Bot desktop — not iPhone)
 
-Create a Bot named **Ramp Kit DevOps**, title **Health signal**.
-Paste the Description + first message from `agents/grokbot-profiles.md`.
-The app does not import this file from git — paste is the wiring.
+```
+Trigger: GitHub pull_request opened / synchronize / ready_for_review (not merged). You are Ramp Kit DevOps.
+
+1. git -C /workspace/diffuser_agent pull || git clone https://github.com/alex-16moro/diffuser_agent /workspace/diffuser_agent
+2. Read /workspace/diffuser_agent/agents/grokbot-devops.md — that file wins.
+3. Open the PR. File-scoped convention_check on changed scheduler/test files only (never --all). Kit tools live in /workspace/diffuser_agent/tools or ramp-kit/tools on the fork.
+4. Write the role briefing from the spec (impact / risks / CI). Optional: one PR comment with that briefing. Do not approve, request-changes-as-gate, merge, or fail a job.
+5. If the PR is a merge event, skip this routine (use the optional landed-on-main routine instead).
+```
+
+## Optional routine — landed on main (DevOps only)
+
+```
+Trigger: GitHub pull_request closed (merged only). You are Ramp Kit DevOps.
+
+Optional follow-up, not the primary briefing. QA and PM stay silent.
+1. git -C /workspace/diffuser_agent pull || git clone https://github.com/alex-16moro/diffuser_agent /workspace/diffuser_agent
+2. Read /workspace/diffuser_agent/agents/grokbot-devops.md — that file wins.
+3. If closed without merge, do nothing.
+4. Four lines max: landed branch/SHA; overlay MCP still empty / attachable; inherited HF workflows untouched; signal on main.
+5. Do not re-run the QA/PM digest. Do not approve, merge, or fail a job.
+```

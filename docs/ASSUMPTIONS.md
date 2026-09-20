@@ -19,11 +19,13 @@ contract facts.
    correctly prefers `/agent/repos/diffusers` when that checkout exists. Kit-only
    CI without the fork SKIPs contract re-verify rather than failing false-red.
 
-5. **Grok Bot has no create-from-git API.** The iPhone/desktop app does not
-   import `agents/*.md`. The kit generates paste-ready profiles
-   (`agents/grokbot-profiles.md`) and Cursor subagents (`.cursor/agents/`).
-   `grokbot_sim.py` remains the reproducible briefing. Bots never change
-   exit codes and never merge.
+5. **Grok Bot loads instructions from git, not from Edit Profile.** The
+   iPhone/desktop app does not import `agents/*.md`. Edit Profile is a
+   short stub (`git pull`, then read `agents/grokbot-<role>.md`). Spec
+   changes propagate on the next PR-opened run. Bots never change exit
+   codes and never merge. Trigger is PR opened / synchronize /
+   ready_for_review — not merge. Optional DevOps-only: closed-as-merged
+   landed note.
 
 6. **TEST002 uses a new check type `test_adequacy`.** Assertion counting is
    structural (AST), not a regex. Determinism and shape/dtype reuse mention
