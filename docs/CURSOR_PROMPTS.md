@@ -15,41 +15,67 @@ the file-scoped gate. Opt-in servers live in `overlay/mcp.optional.json`.
 
 ## Prompt A — first contribution ON THE FORK (paste this)
 
-Launch a **new** Cloud Agent on `alex-16moro/diffusers`, branch `main`. Leave
-MCP **off**.
+Launch a **new** Cloud Agent on `alex-16moro/diffusers`, branch **`main`**. Leave
+MCP **off**. The draft PR **base must be `main`** so overlay CI
+(`ramp-kit-overlay` / `overlay-gate`) actually runs. Do not stack onto a
+`cursor/…` topic branch.
+
+`EulerLiteScheduler` is already on fork `main`. This prompt scaffolds **HeunLite**.
 
 ```
-You are a new engineer contributing to this huggingface/diffusers fork. A customer overlay (ramp-kit/, cloned from alex-16moro/diffuser_agent) encodes conventions as code. Do NOT rely on training memory. Do NOT open a PR against huggingface/diffusers — PR this fork, draft, title "[fork demo — not for upstream]".
+You just joined. This is your first contribution on this huggingface/diffusers FORK (alex-16moro/diffusers). Customer overlay: ramp-kit/ (from alex-16moro/diffuser_agent). Conventions are code, not memory.
 
-Repo facts:
-- This workspace IS the library (src/diffusers, docs/source/en, .ai/, AGENTS.md). Do not overwrite .ai/ or root AGENTS.md. Do not delete .github/workflows from Hugging Face.
-- Overlay: ramp-kit/conventions/rules.yaml is the customer gate. python3 ramp-kit/tools/convention_check.py is CI-equivalent for overlay rules.
-- Ground in THIS checkout, in this order:
-  1. Read src/diffusers/schedulers/scheduling_euler_discrete.py and scheduling_ddpm.py (code beats the philosophy doc).
-  2. Treat ramp-kit/conventions/rules.yaml / the gate as authoritative if anything disagrees.
-  3. Optional, only if asked: python3 ramp-kit/tools/docs_mcp_server.py --query "scheduler set_timesteps step SchedulerMixin register_to_config"
-  Do not wait for an MCP tool. Cite source file paths.
-- Do not read or copy ramp-kit/examples/candidate_scheduler/ into the new files.
+Handoff: opening a draft PR against main is the job. Do not write PM/QA/DevOps briefings. Do not run grokbot_sim.py. Do not @ anyone.
+
+Hard nos:
+- PR this fork only, never huggingface/diffusers.
+- Draft PR, base = main (not a cursor/* topic branch). Title starts with [fork demo — not for upstream].
+- Two files only: the new scheduler + its test. No __init__ export, no dummy object, no docs, no extra commits.
+- Leave TODO(engineer) in step(). Do not invent sampler math.
+- Never convention_check.py --all. File-scope only.
+- Do not overwrite .ai/ or root AGENTS.md. Do not delete inherited .github/workflows.
+- Do not copy ramp-kit/examples/candidate_scheduler/ into the new files.
+
+If ramp-kit/ is missing:
+  git clone --depth 1 https://github.com/alex-16moro/diffuser_agent.git ramp-kit
+
+Grounding, in this order, before writing files:
+1. Read src/diffusers/schedulers/scheduling_euler_discrete.py and scheduling_ddpm.py.
+   Contract: set_timesteps + step, SchedulerMixin + ConfigMixin, @register_to_config. Not set_num_inference_steps.
+2. Treat ramp-kit/conventions/rules.yaml / the gate as authoritative if anything disagrees.
+3. Optional: python3 ramp-kit/tools/docs_mcp_server.py --query "scheduler set_timesteps step SchedulerMixin register_to_config"
+   Do not wait for an MCP tool.
 
 Do these steps in order and narrate them:
 
 1. Catch-early:
    python3 ramp-kit/tools/convention_check.py ramp-kit/examples/candidate_scheduler
+   Summarise blocking rule ids. Do not copy that fixture.
 
-2. Scaffold EulerLiteScheduler:
-   - Copy ramp-kit/templates/scheduler/scheduling_TEMPLATE.py → src/diffusers/schedulers/scheduling_euler_lite.py
-   - Copy ramp-kit/tests/_templates/scheduler_test.py → tests/schedulers/test_scheduling_euler_lite.py (mention set_timesteps and step)
-   - Leave TODO(engineer) in step. Do not invent Euler math.
+2. Scaffold HeunLiteScheduler (EulerLite already exists — do not touch it):
+   Prefer /scaffold scheduler HeunLite if that command exists.
+   Else copy:
+     ramp-kit/templates/scheduler/scheduling_TEMPLATE.py
+       → src/diffusers/schedulers/scheduling_heun_lite.py
+     ramp-kit/tests/_templates/scheduler_test.py
+       → tests/schedulers/test_scheduling_heun_lite.py
+   Class HeunLiteScheduler. Test must mention set_timesteps and step, plus assertions / same-seed determinism / shape+dtype.
+   Leave TODO(engineer) in step(). Do not invent Heun math.
 
-3. Gate the NEW file only (never --all on this library):
-   python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_euler_lite.py
+3. Gate the NEW file only:
+   python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_heun_lite.py
+   Fix every BLOCKING finding until 0 findings.
 
-4. python3 -m unittest tests.schedulers.test_scheduling_euler_lite -v
-   Behavioral skips without torch are expected.
+4. python3 -m unittest tests.schedulers.test_scheduling_heun_lite -v
+   Signature/structural tests must pass. Behavioral skips without torch are expected.
 
-5. Open a draft PR on this fork with those two files, titled "[fork demo — not for upstream]". Report rule ids, grounding (the two source files + gate), leftover math TODO, and that you did not copy the bad fixture.
+5. Open a DRAFT PR on alex-16moro/diffusers, base main, only those two files.
+   Title: [fork demo — not for upstream] Scaffold HeunLiteScheduler contract
+   Expect check-run overlay-gate (ramp-kit-overlay). Inherited Hugging Face jobs may be red or idle — leave them.
+   Body: rule ids, the two source files you grounded in, leftover math TODO, file-scoped gate, did not copy the bad fixture.
 
-Stop at a clean overlay gate. Do not implement the sampler.
+Then stop. Report paths, 0-findings gate, tests (skips OK), and the draft PR URL.
+Do not merge. Do not implement the sampler. Do not export the public API.
 ```
 
 ---
@@ -170,6 +196,7 @@ the tooling. Keep it minimal; do not implement a real model.
 - **Multi-audience:** open `projections/pm|qa|devops/` and `.github/` — same
   rules, different surface. Note the upstream-vs-customer split. One registry,
   many projections — not a capability per SDLC step.
-- **Fork PR hygiene:** draft, `[fork demo — not for upstream]`. Overlay green
-  does not mean Hugging Face CI is green; do not delete their workflows.
+- **Fork PR hygiene:** draft, **base `main`**, `[fork demo — not for upstream]`.
+  Overlay-gate is the customer check-run. Overlay green does not mean Hugging
+  Face CI is green; do not delete their workflows. Two files only; math stays TODO.
 - **Maintainability:** Prompt B — one edit propagates everywhere.
