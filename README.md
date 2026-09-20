@@ -9,10 +9,11 @@ takes: plan → design → build → review → test → deploy.**
 library ([alex-16moro/diffusers](https://github.com/alex-16moro/diffusers)).
 The live Cloud Agent demo launches **on the fork** after you show **this kit**.
 Install clones this kit to `ramp-kit/` and the gate/scaffold write into the real
-`src/diffusers/schedulers/` tree. Grounding is the two scheduler source files
-plus the file-scoped gate — overlay `.cursor/mcp.json` is empty by default
-(opt-in: `overlay/mcp.optional.json`). Do not PR huggingface/diffusers. Fork
-PRs are titled `[fork demo — not for upstream]`. See `overlay/OVERLAY.md`.
+`src/diffusers/schedulers/` tree. Grounding is `.ai/` plus reference source
+plus the file-scoped gate — overlay `.cursor/mcp.json` is empty by default.
+Optional docs CLI: `python3 tools/docs_mcp_server.py --query "..."`. Do not PR
+huggingface/diffusers. Fork PRs are titled `[fork demo — not for upstream]`.
+See `overlay/OVERLAY.md`.
 
 ---
 
@@ -74,7 +75,7 @@ machinery.
 | Convention registry | correctness / consistency | agent + reviewer | adding rows tagged `component:` |
 | Gate (`convention_check.py`) | catch-early + CI | QA + DevOps | reusing existing check types |
 | `/scaffold <component> <Name>` | build (first contribution) | engineer | dropping a template file |
-| Doc-search **MCP** (`docs_mcp_server.py`) | discovery / grounding | engineer + PM | pointing at more docs |
+| Docs CLI (`docs_mcp_server.py --query`) | discovery / grounding | engineer + PM | pointing at more docs |
 | Projections | plan / review / deploy | PM / QA / DevOps | fixed audience set |
 
 Concretely: each rule carries a `component:` tag, and `make build` emits one
@@ -87,15 +88,15 @@ as it grows.
 
 | # | Requirement | How this kit meets it |
 |---|-------------|-----------------------|
-| 1 | Scaffold a correct first contribution | `/scaffold <component> <Name>` command + per-component `.cursor/rules/10-*.mdc` + a correct reference (`examples/scaffolded_scheduler/`) + the `diffusers-docs` MCP for grounding |
+| 1 | Scaffold a correct first contribution | `/scaffold <component> <Name>` command + per-component `.cursor/rules/10-*.mdc` + a correct reference (`examples/scaffolded_scheduler/`) + grounding in `.ai/` / reference source (optional `docs_mcp_server.py --query`) |
 | 2 | Catch mistakes early, strengthen tests | `tools/convention_check.py` (AST + regex) including **TEST002** weak-test / determinism / shape-dtype; in-editor hook; GrokBot QA sim reads `--json` |
 | 3 | Fit CI, stay in approved boundaries | Generated `.github/workflows/convention-gate.yml`: same gate + **projection drift** + **contract re-verify** + tests. `.cursorignore`. Overlay MCP empty by default. File-scoped on the fork. |
 | 4 | Stay maintainable as the library evolves | One `rules.yaml` with `owner:` tags; `make build` / `make demo-maintain`; `verify_scheduler_contract.py` vs fork source; build fails if a check or owner is missing |
 | 5 | Work for PM, QA, DevOps too | Same registry. Projections **group by owner**. GrokBot specs + iPhone/desktop profiles generated per around-engineering role; `grokbot_sim.py --role qa` is the reproducible briefing, not a second gate. Paste pack: `make grokbot-pack` / `docs/GROKBOT.md` |
 
 Built for **Cursor**: rules (`.cursor/rules/*.mdc`), a command
-(`.cursor/commands/scaffold.md`), an edit hook (`.cursor/hooks.json`), an MCP
-server (`.cursor/mcp.json` → `tools/docs_mcp_server.py`), and boundaries
+(`.cursor/commands/scaffold.md`), an edit hook (`.cursor/hooks.json`), empty
+default MCP (`.cursor/mcp.json` → `{"mcpServers":{}}`), and boundaries
 (`.cursorignore`) — all native Cursor primitives, checked into this repo.
 The enforcement itself is plain Python, so nothing is locked to Cursor.
 
@@ -104,13 +105,13 @@ The enforcement itself is plain Python, so nothing is locked to Cursor.
 ```bash
 pip install -r requirements.txt     # PyYAML; the only required dependency
 
-make doctor     # python3 + PyYAML + Cursor files present
+make doctor     # python3 + PyYAML + empty mcp.json + Cursor files present
 make build      # regenerate every audience surface from the registry
-make demo              # catch the bad scheduler, pass the good one, MCP, tests
+make demo              # catch the bad scheduler, pass the good one, docs CLI, tests
 make demo-contribute   # first-contribution journey (KEEP=1 leaves the new files)
 make check      # run the gate on the whole repo (exit code = # blocking)
 make test       # contract tests — zero third-party installs needed
-make mcp        # self-test the diffusers-docs MCP server (NDJSON handshake)
+make mcp        # optional docs CLI: docs_mcp_server.py --query set_timesteps
 make demo-maintain     # add a rule, rebuild, watch it propagate to every surface (req #4)
 make grokbot ROLE=qa   # role briefing from sample gate JSON (does not gate)
 make grokbot-pack      # paste-ready Grok Bot iPhone/desktop profiles
@@ -122,8 +123,8 @@ The 90-second demo (`make demo`) shows:
    gate catches **8 blocking + 2 warnings**, each with a rule id and a fix.
 2. The scaffolded, convention-correct version (`examples/scaffolded_scheduler/`) —
    **0 findings**.
-3. The `diffusers-docs` MCP server answers a grounded query over the library's
-   docs (newline-delimited JSON-RPC, the stdio framing Cursor uses).
+3. Optional docs CLI: `python3 tools/docs_mcp_server.py --query "set_timesteps"`
+   over the library's docs (keyword search; not a Cursor MCP server).
 4. Contract tests green, with numeric determinism skipped cleanly when torch
    isn't installed.
 
@@ -133,10 +134,10 @@ is the customer simulation: **kit first** (catch the bad cut), then **fork**
 
 ## What I deliberately scoped OUT (and why)
 
-- **Embeddings-based ranking / Hub HTTP MCP.** Kit Desktop and the fork overlay
-  ship stdio MCP (`tools/docs_mcp_server.py`, NDJSON). Cloud dropdown:
-  `diffusers-docs-mcp`. Hub HTTP stays out of the default (OAuth, wrong corpus).
-  Embeddings stay out: keyword over curated docs is the debuggable baseline.
+- **Embeddings-based ranking / a live docs MCP.** Default overlay MCP is empty
+  (`{"mcpServers":{}}`). Optional CLI: `python3 tools/docs_mcp_server.py --query`.
+  Hub HTTP stays out (OAuth, wrong corpus). Embeddings stay out: keyword over
+  curated docs is the debuggable baseline.
 - **A tool per SDLC step.** Plan/build/review/test/CI are projections of one
   YAML. A sixth "deploy" capability would fragment the kit.
 - **Model/pipeline scaffolds.** I built the scheduler path end-to-end rather than
@@ -183,18 +184,16 @@ Each upstream rule cites what it was checked against in its `source:` field.
 conventions/rules.yaml          the single source of truth (component-tagged)
 tools/convention_check.py       the runnable gate (AST + regex)
 tools/build_projections.py      renders every audience surface (per-component .mdc)
-tools/docs_mcp_server.py        the diffusers-docs MCP server (NDJSON JSON-RPC)
+tools/docs_mcp_server.py        optional docs CLI (`--query`; leftover `--serve`)
 tools/demo_contribute.py        CLI twin of the live `/scaffold` contribution
-knowledge/diffusers-docs/       seed doc corpus for the MCP (override with a real checkout)
+knowledge/diffusers-docs/       seed doc corpus for the CLI (override with a real checkout)
 templates/                      scaffold templates + "add a component" guide
 src/diffusers/schedulers/       stand-in path `/scaffold` writes to
 .cursor/rules/*.mdc             agent conventions (generated; 00-core + 10-<component>)
 .cursor/commands/scaffold.md    /scaffold <component> <Name> guided first task
 .cursor/hooks.json              afterFileEdit → the same gate CI runs
-.cursor/mcp.json                kit Desktop MCP (stdio; no ${workspaceFolder})
-overlay/mcp.json                fork overlay default (stdio diffusers-docs, no Hub HTTP)
-overlay/mcp.optional.json       opt-in Hub HTTP + stdio for Desktop only
-.cursor/mcp-diffusers-docs.py   cwd-independent stdio launcher (Cloud-safe)
+.cursor/mcp.json                empty default (`{"mcpServers":{}}`)
+overlay/mcp.json                fork overlay default (same empty servers)
 .cursorignore                   approved context boundary (req. 3)
 AGENTS.md                       tool-agnostic mirror (generated)
 examples/candidate_scheduler/   the "from memory" first cut (fails the gate)

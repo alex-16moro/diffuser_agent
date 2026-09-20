@@ -2,7 +2,7 @@
 """Narrated first-contribution demo — the same steps `/scaffold` tells an engineer.
 
 This is the CLI twin of the live Cursor journey. Use it to rehearse, as a
-fallback if slash-commands/MCP stall, or in CI. It does not invent math.
+fallback if slash-commands stall, or in CI. It does not invent math.
 
   python3 tools/demo_contribute.py                  # create, prove, remove
   python3 tools/demo_contribute.py --keep           # leave files for the walkthrough
@@ -56,7 +56,7 @@ def ground() -> None:
     from docs_mcp_server import _format_hits, search_docs  # noqa: WPS433
 
     query = "scheduler set_timesteps step SchedulerMixin register_to_config"
-    print(f"Grounding (same corpus the MCP search_docs tool uses):\n  query: {query}\n")
+    print(f"Grounding (optional docs CLI --query):\n  query: {query}\n")
     print(_format_hits(search_docs(query, k=2)))
     print(
         "\nSay: grounding is advisory. The registry + gate are authoritative "

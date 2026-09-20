@@ -1,30 +1,23 @@
 #!/usr/bin/env python3
 """
-docs_mcp_server.py — a real MCP server that gives the agent GROUNDED search over
-the library's own docs, so "how does diffusers do X" is answered from THIS repo
-at THIS version, not from stale training memory.
+docs_mcp_server.py — optional keyword search over the library's own docs.
 
 WHY THIS IS A PRIMITIVE (not per-task tooling): discovery is component-agnostic.
-The same server serves scheduler, model, and pipeline questions — you scale it
+The same CLI serves scheduler, model, and pipeline questions — you scale it
 by pointing it at more docs, never by adding new machinery. It complements the
 convention gate: the gate stops WRONG code; doc-search improves DISCOVERY.
 
-TRANSPORT: MCP stdio — JSON-RPC 2.0 as newline-delimited JSON (what Cursor
-expects on stdio). The reader still accepts Content-Length (LSP-style) as
-well as NDJSON, so older clients keep working. Cursor Desktop launches it
-from .cursor/mcp.json via .cursor/mcp-diffusers-docs.py (workspace-relative
-arg; no ${workspaceFolder} — Cloud stdio does not expand it and cannot set
-cwd). Implemented with the standard library only, so it runs on a fresh
-clone / GPU-less CI with zero installs (a hard PyPI-free constraint we
-actually hit while building this).
+Default Cursor overlay does **not** wire this as an MCP server
+(`.cursor/mcp.json` is `{"mcpServers":{}}`). The supported path is `--query`.
+`--serve` / `--selftest` remain as leftover implementation.
 
-Methods implemented: initialize, notifications/initialized, ping, tools/list,
-tools/call (tool: search_docs).
+Implemented with the standard library only, so it runs on a fresh clone /
+GPU-less CI with zero installs.
 
 Run modes:
-  python3 tools/docs_mcp_server.py --serve            # MCP stdio (what Cursor uses)
-  python3 tools/docs_mcp_server.py --query "..."      # CLI, for offline testing
-  python3 tools/docs_mcp_server.py --selftest         # simulate the MCP handshake
+  python3 tools/docs_mcp_server.py --query "..."      # CLI fallback (supported)
+  python3 tools/docs_mcp_server.py --serve            # leftover MCP stdio
+  python3 tools/docs_mcp_server.py --selftest         # leftover handshake check
 """
 from __future__ import annotations
 

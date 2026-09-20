@@ -69,8 +69,8 @@ open on the fork until they have seen the registry and the gate.
 Do not run kit `KEEP=1` before the fork agent if you want those files to appear
 live on the fork.
 
-MCP is **stdio `diffusers-docs`**, not Hub HTTP. Cloud dropdown:
-`diffusers-docs-mcp`. If they ask how docs were searched without the tool: CLI
+Default `.cursor/mcp.json` is empty. Grounding is `AGENTS.md`, `.ai/`, and
+reference source. Optional CLI:
 `python3 ramp-kit/tools/docs_mcp_server.py --query "..."`.
 
 ### 22–30 min · Multi-audience + boundaries
@@ -87,17 +87,15 @@ MCP is **stdio `diffusers-docs`**, not Hub HTTP. Cloud dropdown:
 
 ### 30–38 min · Judgment: the design that scales, and what I skipped
 - "It's five fixed primitives driven by data — registry, gate, scaffold, docs
-  search (CLI / optional MCP), projections. Adding a component (model, pipeline)
+  CLI (`--query`), projections. Adding a component (model, pipeline)
   is registry rows + a template, not a new command. That's `make build`
   regenerating a `10-<component>.mdc` from a tag — I can show that live in
   under a minute."
 - "I did not grow a capability per SDLC step. That is how these kits fragment."
-- "The fork overlay ships **stdio `diffusers-docs`**, not Hub HTTP. Cloud Agents
-  skip project `mcp.json`; paste `diffusers-docs-mcp` in the dropdown. Stdio
-  cannot set `cwd` or expand `${workspaceFolder}` — the launcher plus PATH shim
-  fix that. Hub HTTP MCP is Hub search + OAuth, not library source. Keyword
-  MCP/`--query` is the same server. I skipped *embeddings* inside that search —
-  keyword over curated docs first."
+- "The fork overlay ships **empty** `mcp.json`. Grounding is `.ai/` plus
+  reference source. Optional CLI: `docs_mcp_server.py --query`. Hub HTTP is
+  Hub search + OAuth, not library source. I skipped *embeddings* — keyword
+  over curated docs first."
 - "I went deep on schedulers, not shallow on all three components, because
   schedulers have the crispest enforceable contract — the best proof."
 - "No auto-fix: on a numerical library, auto-fix is where you inject silent wrong
@@ -182,10 +180,11 @@ This turns the single biggest risk to the thesis into its strongest proof.
 > I'd find out' is the posture I want on your account too."
 
 **"Why not MCP / embeddings / a tool per step?"**
-> "Grounding that survives a skeptical reviewer is the two scheduler source
-> files plus the gate. MCP on Cloud failed discovery and Hub OAuth is the wrong
-> corpus. Embeddings add a model I don't need for a 45-minute proof. A tool per
-> SDLC step is how the kit would fragment the moment you asked for deploy."
+> "Grounding that survives a skeptical reviewer is `.ai/` plus the two scheduler
+> source files plus the gate. A live docs MCP on Cloud failed discovery and Hub
+> OAuth is the wrong corpus. Embeddings add a model I don't need for a 45-minute
+> proof. A tool per SDLC step is how the kit would fragment the moment you asked
+> for deploy."
 
 ### If asked to extend it live (they said you'll reuse this)
 - Add a rule to `rules.yaml` (e.g. a new deprecated import), `make build`,

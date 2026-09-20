@@ -42,7 +42,7 @@ fork source (`tools/verify_scheduler_contract.py`).
 | **AST for structural rules** | Class bases, method presence, `@register_to_config`, mutable defaults, docstrings are *structure*. AST doesn't false-positive on a comment or a reformat the way grep does. Regex is used only for line-level lexical patterns. |
 | **`.cursorignore` for boundaries** | Requirement 3 says "don't pull in context from outside approved boundaries." `.cursorignore` is exactly that mechanism — it removes paths from the agent's context window, so a scaffold can't copy the known-bad fixture (or, in a customer repo, vendored/secret/generated code) toward prod. |
 | **`.cursor/hooks.json` `afterFileEdit`** | Runs the gate on the edited file the moment the agent touches it — the same script CI runs — so feedback is instant and CI surprises are rare. The hook reads Cursor's stdin JSON (`file_path`, `edits`). |
-| **MCP NDJSON stdio** | Cursor's local MCP transport is JSON-RPC as newline-delimited JSON. `tools/docs_mcp_server.py` writes NDJSON (it still *reads* Content-Length). Cloud stdio cannot set `cwd` or expand `${workspaceFolder}`. The launcher plus `install-docs-mcp.sh` make `python3 -u .cursor/mcp-diffusers-docs.py` resolve from `/agent`. Hub HTTP MCP is Hub search + OAuth — it is **not** in the default overlay. Cloud dropdown: `diffusers-docs-mcp`. |
+| **Empty default MCP + docs CLI** | `.cursor/mcp.json` is `{"mcpServers":{}}`. Grounding is `.ai/` plus reference source. Optional: `python3 tools/docs_mcp_server.py --query`. `--serve` remains in that file as leftover implementation, not a Cursor default. |
 | **One script, `--json` + exit code** | Exit code = number of blocking findings makes it a drop-in CI gate anywhere; `--json` feeds dashboards / PR annotations. No GPU, no downloads, no network → cheapest runner. |
 | **Tests in stdlib `unittest`** | Runs on a fresh clone with zero installs (structural contract), and layers in numeric determinism when torch is present. The demo can't fail because a wheel didn't download. |
 
@@ -63,7 +63,7 @@ registry is component-agnostic; adding a `models.md` rule set is additive.
 | Build | Agent rules + `/scaffold <component> <Name>` produce a correct first cut |
 | Review | Gate blocks the machine-checkable items; QA checklist focuses humans on judgment |
 | Test | Generated contract test (structural + behavioral); TEST001 requires the file; TEST002 requires assertions, same-seed determinism, and shape/dtype |
-| CI / Release gate | Identical gate in `.github/workflows/convention-gate.yml` + MCP self-test + tests; `.cursorignore` keeps changes in the agent's context boundary. Green gate = merge-eligible (release clearance). I stop here — no customer deploy env or auth model, so I don't fake "deploy". |
+| CI / Release gate | Identical gate in `.github/workflows/convention-gate.yml` + docs CLI `--query` + tests; `.cursorignore` keeps changes in the agent's context boundary. Green gate = merge-eligible (release clearance). I stop here — no customer deploy env or auth model, so I don't fake "deploy". |
 
 ## Failure modes I designed around
 

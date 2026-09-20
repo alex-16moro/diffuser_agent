@@ -22,9 +22,9 @@ These were made before this submission pass. Do not silently reopen them.
    `.github/workflows/ramp-kit-overlay.yml` (attached), not the kit's
    `convention-gate.yml`.
 
-5. **Default fork MCP is stdio `diffusers-docs` only.** Never Hub HTTP (OAuth).
-   Cloud dropdown: `diffusers-docs-mcp` or `python3 -u .cursor/mcp-diffusers-docs.py`.
-   The launcher must resolve from the workspace root (`/agent`), not only the
-   git repo. CLI `--query` remains a fallback.
+5. **Default overlay MCP is empty.** `.cursor/mcp.json` is `{"mcpServers":{}}`.
+   Grounding is `.ai/` plus reference source. Optional CLI:
+   `python3 tools/docs_mcp_server.py --query "..."`. No Cloud dropdown
+   command is required.
 
 6. **Scaffold the contract, not the sampler.** Leave `TODO(engineer)` in `step()`.

@@ -50,9 +50,9 @@ Pre-flight (before they sit):
 
 - **Kit (this repo):** `make doctor`. Catch-early fixture is here.
 - **Cloud Agent:** launch on **`alex-16moro/diffusers`**, branch `main` (not this
-  kit). Overlay `.cursor/mcp.json` is stdio `diffusers-docs` only. Enable that
-  in the Cloud MCP dropdown (`diffusers-docs-mcp` or
-  `python3 -u .cursor/mcp-diffusers-docs.py`). Do **not** enable Hub HTTP.
+  kit). Overlay `.cursor/mcp.json` is empty (`{"mcpServers":{}}`). Grounding is
+  root `AGENTS.md`, `.ai/`, and reference source. Optional:
+  `python3 ramp-kit/tools/docs_mcp_server.py --query "set_timesteps"`.
   The paste is Prompt A: copy templates, file-scoped gate. Catch-early stays
   on this kit, not in the paste.
 - Paste **Prompt A (fork)** from `docs/CURSOR_PROMPTS.md`.
@@ -95,7 +95,7 @@ Optional 2-minute add-on if Grok Bot is on a phone in the room: open
 into **Edit Profile**, send the first message. The Bot is a reader of the
 same gate JSON you just produced.
 
-If they ask for a docs search without MCP:
+If they ask for a docs search:
 
 ```bash
 python3 ramp-kit/tools/docs_mcp_server.py --query "scheduler set_timesteps step"
@@ -114,7 +114,7 @@ topic branch.
 
 ```bash
 make doctor
-make demo                    # catch-early, scaffolded 0 findings, MCP, tests, GrokBot QA, contract re-verify
+make demo                    # catch-early, scaffolded 0 findings, docs CLI, tests, GrokBot QA, contract re-verify
 make demo-contribute KEEP=1  # leaves EulerLite on disk
 # walk the printed steps with them
 make grokbot ROLE=qa         # same sim from candidate_scheduler --json
@@ -159,17 +159,17 @@ Two files, two launch targets:
 
 | Launch on | File | What install / start do |
 |-----------|------|-------------------|
-| **This kit** | `.cursor/environment.json` | `install`: `.cursor/cloud-install.sh` (pyyaml, CPU torch, diffusers, `diffusers-docs-mcp` PATH shim, MCP `--selftest`). `start`: re-run the shim only (snapshot boots skip `install`). Allowlist command: `diffusers-docs-mcp`. Declares the fork as a repo dependency. |
-| **The fork** | `overlay/environment.json` (copied to fork `.cursor/environment.json` by `make attach`) | Clones this kit to `ramp-kit/` if missing, then the same `cloud-install.sh`. `start` refreshes `diffusers-docs-mcp`. Fork `.cursor/mcp.json` is stdio `diffusers-docs` only (no Hub HTTP). |
+| **This kit** | `.cursor/environment.json` | `install`: `.cursor/cloud-install.sh` (pyyaml, CPU torch, diffusers, docs CLI `--query` smoke). No `start`, no `mcpServerAllowlist`. Declares the fork as a repo dependency. |
+| **The fork** | `overlay/environment.json` (copied to fork `.cursor/environment.json` by `make attach`) | Clones this kit to `ramp-kit/` if missing, then the same `cloud-install.sh`. Fork `.cursor/mcp.json` is `{"mcpServers":{}}`. |
 
 Dry-run locally (does not boot a Cloud VM):
 
 ```bash
 python3 -c "import json; print(json.dumps(json.load(open('overlay/environment.json')), indent=2))"
 python3 -c "import json; print(json.dumps(json.load(open('.cursor/environment.json')), indent=2))"
-make attach TARGET=../diffusers   # copies stdio mcp.json; does not touch AGENTS.md / .ai/
+make attach TARGET=../diffusers   # copies empty mcp.json; does not touch AGENTS.md / .ai/
 python3 -c "import json; print(json.load(open('../diffusers/.cursor/mcp.json')))"
-# expected: mcpServers.diffusers-docs stdio, no huggingface
+# expected: {"mcpServers": {}}
 ```
 
 If a Cloud Agent is already on the fork, the boot install is that JSON. You do not re-run attach live unless `.cursor/` is missing. Clearance is the file-scoped overlay gate **plus** library `make style` / `make quality`. Inherited jobs that need Hugging Face runners or size labels may still be red on this personal fork; that is hosting, not a reason to skip `make quality`.

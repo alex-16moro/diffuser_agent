@@ -112,6 +112,18 @@ class TestLibraryPaths(unittest.TestCase):
 
 
 class TestMcpFraming(unittest.TestCase):
+    def test_query_set_timesteps(self):
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "docs_mcp_server.py"),
+             "--query", "set_timesteps"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        self.assertTrue(proc.stdout.strip(), proc.stdout)
+
     def test_selftest_emits_ndjson(self):
         proc = subprocess.run(
             [sys.executable, str(ROOT / "tools" / "docs_mcp_server.py"), "--selftest"],
@@ -123,85 +135,9 @@ class TestMcpFraming(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
         self.assertNotIn("Content-Length", proc.stdout)
         self.assertIn("NDJSON", proc.stdout)
-        self.assertIn("search_docs", proc.stdout)
 
-
-class TestOverlayMcpDefaults(unittest.TestCase):
-    def test_overlay_mcp_json_is_stdio_docs_only(self):
-        raw = (ROOT / "overlay" / "mcp.json").read_text()
-        self.assertNotIn("${workspaceFolder}", raw)
-        cfg = json.loads(raw)
-        servers = cfg["mcpServers"]
-        self.assertIn("diffusers-docs", servers)
-        self.assertNotIn("huggingface", servers)
-        stdio = servers["diffusers-docs"]
-        self.assertEqual(stdio.get("type"), "stdio")
-        self.assertEqual(stdio["command"], "python3")
-        self.assertEqual(stdio["args"], ["-u", ".cursor/mcp-diffusers-docs.py"])
-
-    def test_overlay_mcp_optional_lists_opt_in_servers(self):
-        raw = (ROOT / "overlay" / "mcp.optional.json").read_text()
-        self.assertNotIn("${workspaceFolder}", raw)
-        cfg = json.loads(raw)
-        servers = cfg["mcpServers"]
-        self.assertIn("diffusers-docs", servers)
-        self.assertIn("huggingface", servers)
-        stdio = servers["diffusers-docs"]
-        self.assertEqual(stdio.get("type"), "stdio")
-        self.assertEqual(stdio["command"], "python3")
-        self.assertEqual(stdio["args"], ["-u", ".cursor/mcp-diffusers-docs.py"])
-        self.assertEqual(servers["huggingface"].get("url"), "https://huggingface.co/mcp")
-
-    def test_attach_copies_stdio_default_and_optional(self):
-        src = (ROOT / "tools" / "attach_library.py").read_text()
-        self.assertIn('shutil.copy2(overlay / "mcp.json", cursor / "mcp.json")', src)
-        self.assertIn(
-            'shutil.copy2(overlay / "mcp.optional.json", cursor / "mcp.optional.json")',
-            src,
-        )
-
-
-class TestMcpLauncher(unittest.TestCase):
-    def test_project_mcp_json_has_no_workspace_folder_var(self):
-        raw = (ROOT / ".cursor" / "mcp.json").read_text()
-        self.assertNotIn("${workspaceFolder}", raw)
-        self.assertNotIn("${workspaceFolderBasename}", raw)
-        cfg = json.loads(raw)
-        server = cfg["mcpServers"]["diffusers-docs"]
-        self.assertEqual(server.get("type"), "stdio")
-        self.assertEqual(server["command"], "python3")
-        self.assertEqual(server["args"], ["-u", ".cursor/mcp-diffusers-docs.py"])
-        self.assertTrue((ROOT / ".cursor" / "mcp-diffusers-docs.py").is_file())
-        self.assertTrue((ROOT / ".cursor" / "mcp-diffusers-docs.sh").is_file())
-        self.assertTrue((ROOT / ".cursor" / "commands" / "search-docs.md").is_file())
-        self.assertTrue((ROOT / ".cursor" / "skills" / "search-docs" / "SKILL.md").is_file())
-
-    def test_launcher_serves_from_unrelated_cwd(self):
-        """Cloud stdio has no cwd; the launcher must still find the server."""
-        sys.path.insert(0, str(ROOT / "tools"))
-        from docs_mcp_server import _frame  # noqa: WPS433
-
-        reqs = [
-            {"jsonrpc": "2.0", "id": 1, "method": "initialize",
-             "params": {"protocolVersion": "2025-03-26", "capabilities": {}}},
-            {"jsonrpc": "2.0", "method": "notifications/initialized"},
-            {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
-        ]
-        proc = subprocess.run(
-            [sys.executable, "-u", str(ROOT / ".cursor" / "mcp-diffusers-docs.py")],
-            cwd=tempfile.gettempdir(),
-            input=b"".join(_frame(r) for r in reqs),
-            capture_output=True,
-            timeout=10,
-            check=False,
-        )
-        self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8", "replace"))
-        self.assertIn(b"search_docs", proc.stdout)
-        self.assertNotIn(b"Content-Length", proc.stdout)
-        self.assertNotIn(b"${workspaceFolder}", proc.stdout)
-
-    def test_ndjson_client_handshake_lists_search_docs(self):
-        """Cursor Cloud writes NDJSON requests, not Content-Length."""
+    def test_serve_handshake_still_works(self):
+        """Leftover --serve implementation; not wired by default mcp.json."""
         reqs = [
             {"jsonrpc": "2.0", "id": 1, "method": "initialize",
              "params": {"protocolVersion": "2025-11-25", "capabilities": {}}},
@@ -223,39 +159,92 @@ class TestMcpLauncher(unittest.TestCase):
         lines = [json.loads(ln) for ln in proc.stdout.decode().splitlines() if ln.strip()]
         self.assertEqual(lines[0]["result"]["protocolVersion"], "2025-11-25")
         self.assertNotIn("resources", lines[0]["result"]["capabilities"])
-        self.assertEqual(lines[1]["result"]["tools"][0]["name"], "search_docs")
         self.assertEqual(lines[2]["result"]["resourceTemplates"], [])
 
-    def test_launcher_finds_kit_from_workspace_root(self):
-        """Cloud stdio cwd is often /agent, not the git repo."""
-        with tempfile.TemporaryDirectory() as td:
-            ws = Path(td)
-            kit = ws / "repos" / "diffuser_agent"
-            (kit / "tools").mkdir(parents=True)
-            (kit / ".cursor").mkdir(parents=True)
-            shutil.copy2(ROOT / "tools" / "docs_mcp_server.py", kit / "tools" / "docs_mcp_server.py")
-            shutil.copy2(ROOT / "tools" / "library_paths.py", kit / "tools" / "library_paths.py")
-            shutil.copy2(ROOT / ".cursor" / "mcp-diffusers-docs.py", kit / ".cursor" / "mcp-diffusers-docs.py")
-            (kit / "knowledge" / "diffusers-docs").mkdir(parents=True)
-            launcher = ws / ".cursor" / "mcp-diffusers-docs.py"
-            launcher.parent.mkdir(parents=True)
-            shutil.copy2(ROOT / ".cursor" / "mcp-diffusers-docs.py", launcher)
-            reqs = [
-                {"jsonrpc": "2.0", "id": 1, "method": "initialize",
-                 "params": {"protocolVersion": "2025-03-26", "capabilities": {}}},
-                {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
-            ]
-            payload = "".join(json.dumps(r, separators=(",", ":")) + "\n" for r in reqs)
-            proc = subprocess.run(
-                [sys.executable, "-u", str(launcher)],
-                cwd=str(ws),
-                input=payload.encode("utf-8"),
-                capture_output=True,
-                timeout=10,
-                check=False,
-            )
-            self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8", "replace"))
-            self.assertIn(b"search_docs", proc.stdout)
+
+class TestEmptyDefaultMcp(unittest.TestCase):
+    _STALE = (
+        "mcp.optional.json",
+        "mcp-diffusers-docs.py",
+        "mcp-diffusers-docs.sh",
+        "mcp_stdio_boot.py",
+        "install-docs-mcp.sh",
+    )
+    _LIVE_NEEDLES = (
+        "diffusers-docs-mcp",
+        "mcp-diffusers-docs",
+        "mcp.optional",
+        "search_docs MCP",
+        "`search_docs` MCP",
+        "MCP tool `search_docs`",
+        "MCP tool search_docs",
+    )
+
+    def test_kit_and_overlay_mcp_json_are_empty(self):
+        for path in (
+            ROOT / ".cursor" / "mcp.json",
+            ROOT / "overlay" / "mcp.json",
+        ):
+            raw = path.read_text()
+            self.assertNotIn("${workspaceFolder}", raw)
+            cfg = json.loads(raw)
+            self.assertEqual(cfg.get("mcpServers"), {}, path)
+
+    def test_no_docs_mcp_launchers_or_optional(self):
+        for name in self._STALE:
+            self.assertFalse((ROOT / ".cursor" / name).exists(), name)
+            self.assertFalse((ROOT / "overlay" / name).exists(), name)
+
+    def test_environment_has_no_mcp_allowlist_or_start(self):
+        for path in (
+            ROOT / ".cursor" / "environment.json",
+            ROOT / "overlay" / "environment.json",
+        ):
+            env = json.loads(path.read_text())
+            self.assertNotIn("mcpServerAllowlist", env, path)
+            self.assertNotIn("start", env, path)
+
+    def test_docs_and_specs_do_not_advertise_live_search_docs_mcp(self):
+        roots = [
+            ROOT / "docs",
+            ROOT / "agents",
+            ROOT / "overlay",
+            ROOT / ".cursor" / "commands",
+            ROOT / ".cursor" / "skills",
+            ROOT / ".cursor" / "rules",
+            ROOT / ".cursor" / "agents",
+            ROOT / "projections",
+            ROOT / ".github",
+        ]
+        files = [
+            ROOT / "README.md",
+            ROOT / "AGENTS.md",
+        ]
+        for root in roots:
+            if root.is_dir():
+                files.extend(
+                    p for p in root.rglob("*")
+                    if p.is_file() and p.suffix in {".md", ".mdc", ".yml", ".yaml", ".json", ".html"}
+                )
+        hits = []
+        for path in files:
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for needle in self._LIVE_NEEDLES:
+                if needle in text:
+                    hits.append(f"{path.relative_to(ROOT)}: {needle}")
+        self.assertEqual(hits, [])
+
+
+class TestOverlayMcpDefaults(unittest.TestCase):
+    def test_attach_copies_empty_mcp_json(self):
+        src = (ROOT / "tools" / "attach_library.py").read_text()
+        self.assertIn('shutil.copy2(overlay / "mcp.json", cursor / "mcp.json")', src)
+        self.assertNotIn(
+            'shutil.copy2(overlay / "mcp.optional.json", cursor / "mcp.optional.json")',
+            src,
+        )
+        self.assertIn("mcp-diffusers-docs.py", src)  # unlink list
+
 
 
 class TestAfterFileEditHook(unittest.TestCase):
@@ -666,11 +655,22 @@ class TestProjectionDrift(unittest.TestCase):
 
 
 class TestAttachEmptyMcp(unittest.TestCase):
-    def test_attach_writes_stdio_docs_mcp(self):
+    def test_attach_writes_empty_mcp_and_unlinks_stale(self):
         with tempfile.TemporaryDirectory() as td:
             fake = Path(td) / "diffusers"
             (fake / "src" / "diffusers" / "schedulers").mkdir(parents=True)
             (fake / ".gitignore").write_text("# Cursor\n.cursor\n")
+            cursor = fake / ".cursor"
+            cursor.mkdir()
+            stale = (
+                "mcp.optional.json",
+                "mcp-diffusers-docs.py",
+                "mcp-diffusers-docs.sh",
+                "mcp_stdio_boot.py",
+                "install-docs-mcp.sh",
+            )
+            for name in stale:
+                (cursor / name).write_text("stale\n")
             proc = subprocess.run(
                 [sys.executable, str(ROOT / "tools" / "attach_library.py"),
                  "--target", str(fake)],
@@ -681,13 +681,12 @@ class TestAttachEmptyMcp(unittest.TestCase):
             )
             self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
             cfg = json.loads((fake / ".cursor" / "mcp.json").read_text())
-            self.assertIn("diffusers-docs", cfg.get("mcpServers", {}))
-            self.assertNotIn("huggingface", cfg.get("mcpServers", {}))
-            self.assertEqual(
-                cfg["mcpServers"]["diffusers-docs"]["args"],
-                ["-u", ".cursor/mcp-diffusers-docs.py"],
-            )
-            self.assertTrue((fake / ".cursor" / "mcp.optional.json").is_file())
+            self.assertEqual(cfg.get("mcpServers"), {})
+            env = json.loads((fake / ".cursor" / "environment.json").read_text())
+            self.assertNotIn("mcpServerAllowlist", env)
+            self.assertNotIn("start", env)
+            for name in stale:
+                self.assertFalse((fake / ".cursor" / name).exists(), name)
             self.assertNotIn("AGENTS.md", [p.name for p in fake.iterdir()])
             wf = (fake / ".github" / "workflows" / "ramp-kit-overlay.yml").read_text()
             self.assertIn("ramp-kit-overlay", wf)
@@ -700,7 +699,9 @@ class TestAttachEmptyMcp(unittest.TestCase):
             self.assertIn("make quality", scaffold)
             self.assertIn("check_dummies.py", scaffold)
             self.assertIn("AGENTS.md", scaffold)
-            self.assertNotIn("docs_mcp_server.py", scaffold)
+            self.assertIn(".ai/", scaffold)
+            self.assertIn("docs_mcp_server.py --query", scaffold)
+            self.assertNotIn("search_docs", scaffold)
             self.assertNotIn("Those files are the contract", scaffold)
             self.assertNotIn("those two files only", scaffold)
 
@@ -751,6 +752,7 @@ class TestEngineerPromptScope(unittest.TestCase):
         self.assertNotIn("docs_mcp_server.py", paste)
         self.assertNotIn("docs/source", paste)
         self.assertNotIn("search_docs", paste)
+        self.assertNotIn("diffusers-docs-mcp", paste)
         self.assertNotIn("grokbot_sim", paste)
         self.assertIn("Never convention_check.py --all", paste)
 
@@ -761,8 +763,11 @@ class TestEngineerPromptScope(unittest.TestCase):
         self.assertIn("make style", text)
         self.assertIn("make quality", text)
         self.assertIn("AGENTS.md", text)
+        self.assertIn(".ai/", text)
+        self.assertIn("docs_mcp_server.py --query", text)
         self.assertNotIn("Those files are the contract", text)
-        self.assertNotIn("docs_mcp_server.py", text)
+        self.assertNotIn("search_docs", text)
+        self.assertNotIn("diffusers-docs-mcp", text)
         self.assertNotIn("scheduling_euler_discrete.py", text)
         self.assertNotIn("convention_check.py --all", text)
         self.assertNotIn("those two files only", text)

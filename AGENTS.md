@@ -7,8 +7,9 @@ This repo uses convention-as-code. The authoritative rules live in
 `conventions/rules.yaml` and are enforced by `tools/convention_check.py`.
 Before opening a PR, run `make check` and fix every blocking finding.
 The first contribution is the registry + templates, not a docs page or
-a copied library scheduler. Optional docs search: `search_docs` MCP,
-`/search-docs`, or `python3 tools/docs_mcp_server.py --query "..."`.
+a copied library scheduler. Grounding is the registry and (on the
+library) `.ai/` plus reference source. Optional docs CLI:
+`python3 tools/docs_mcp_server.py --query "..."`.
 
 ## Conventions
 
