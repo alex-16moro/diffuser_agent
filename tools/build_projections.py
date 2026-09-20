@@ -281,12 +281,12 @@ def build_cursor_core():
         "`tools/convention_check.py` — the same gate that runs in CI, so producing",
         "code that violates a **block** rule will fail the build.",
         "",
-        "Use the `diffusers-docs` MCP tool (`search_docs`) to ground answers in the",
-        "library's current docs before scaffolding. If that tool is **not** in your",
-        "tool list (Cloud Agents skip project `.cursor/mcp.json` unless the launch",
-        "MCP dropdown has stdio `python3 -u .cursor/mcp-diffusers-docs.py`), run",
-        "`/search-docs <query>`, the `search-docs` skill, or",
-        "`python3 tools/docs_mcp_server.py --query \"...\"` — same server.",
+        "The first contribution is what `conventions/rules.yaml` checks. Copy the",
+        "templates (`/scaffold`) and stop at 0 blocking findings from",
+        "`tools/convention_check.py` on the new files. Do not add files the",
+        "registry does not scan. Docs search (`search_docs` / `/search-docs`) is",
+        "optional and is not a deliverable.",
+        "",
         "Do not pull in code or context from outside this repo's approved",
         "boundaries (see `.cursorignore`).",
         "",
@@ -300,8 +300,9 @@ def build_cursor_core():
         lines.append(f"- **{r['id']} — {r['title']}.** {r['agent_hint']}")
     lines.append("")
     lines.append("Component-specific rules auto-attach when you open a matching file")
-    lines.append("(e.g. a scheduler). Prefer copying an existing in-repo example with a")
-    lines.append("`# Copied from` marker over inventing a new pattern.")
+    lines.append("(e.g. a scheduler). Start from `/scaffold` templates, not from a")
+    lines.append("library scheduler file. Use a `# Copied from` marker only when you")
+    lines.append("intentionally duplicate a small helper.")
     lines.append("")
     write(ROOT / ".cursor" / "rules" / "00-conventions.mdc", "\n".join(lines))
 
@@ -347,11 +348,9 @@ def build_agents_md():
         "This repo uses convention-as-code. The authoritative rules live in",
         "`conventions/rules.yaml` and are enforced by `tools/convention_check.py`.",
         "Before opening a PR, run `make check` and fix every blocking finding.",
-        "Ground your work with the `diffusers-docs` MCP tool (`search_docs`).",
-        "If that tool is missing (Cloud Agents skip project `.cursor/mcp.json`",
-        "unless the MCP dropdown is `python3 -u .cursor/mcp-diffusers-docs.py`),",
-        "run `/search-docs <query>`, the `search-docs` skill, or",
-        "`python3 tools/docs_mcp_server.py --query \"...\"` — same server.",
+        "The first contribution is the registry + templates, not a docs page or",
+        "a copied library scheduler. Optional docs search: `search_docs` MCP,",
+        "`/search-docs`, or `python3 tools/docs_mcp_server.py --query \"...\"`.",
         "",
         "## Conventions",
     ]
@@ -379,7 +378,8 @@ def build_agents_md():
         "marks paths that are off-limits as agent context.",
         "",
         "## First task",
-        "Ground first (`/search-docs` or MCP `search_docs`), then scaffold:",
+        "Copy the scheduler template and matching test, then run the file-scoped",
+        "gate until 0 blocking:",
         f"{comp_list}. See `.cursor/commands/scaffold.md`.",
         "",
     ])

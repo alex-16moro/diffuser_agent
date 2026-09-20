@@ -6,11 +6,9 @@
 This repo uses convention-as-code. The authoritative rules live in
 `conventions/rules.yaml` and are enforced by `tools/convention_check.py`.
 Before opening a PR, run `make check` and fix every blocking finding.
-Ground your work with the `diffusers-docs` MCP tool (`search_docs`).
-If that tool is missing (Cloud Agents skip project `.cursor/mcp.json`
-unless the MCP dropdown is `python3 -u .cursor/mcp-diffusers-docs.py`),
-run `/search-docs <query>`, the `search-docs` skill, or
-`python3 tools/docs_mcp_server.py --query "..."` — same server.
+The first contribution is the registry + templates, not a docs page or
+a copied library scheduler. Optional docs search: `search_docs` MCP,
+`/search-docs`, or `python3 tools/docs_mcp_server.py --query "..."`.
 
 ## Conventions
 
@@ -38,5 +36,6 @@ Do not import or copy code from outside this repository. `.cursorignore`
 marks paths that are off-limits as agent context.
 
 ## First task
-Ground first (`/search-docs` or MCP `search_docs`), then scaffold:
+Copy the scheduler template and matching test, then run the file-scoped
+gate until 0 blocking:
 `/scaffold scheduler <Name>`. See `.cursor/commands/scaffold.md`.
