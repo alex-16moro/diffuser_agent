@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ramp Kit Briefing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#F5F6F8; --surface:#FFFFFF; --surface-2:#EEF0F4;
+    --ink:#15171B; --muted:#5A6472; --line:#E2E5EA;
+    --accent:#0B7A6B; --accent-ink:#075E52; --accent-soft:#DCEFEA;
+    --warn:#9A5B0B; --good:#146C43; --bad:#B4232A;
+    --shadow:0 1px 2px rgba(20,23,28,.06), 0 8px 24px rgba(20,23,28,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0B0D10; --surface:#14171C; --surface-2:#1B1F26;
+      --ink:#EEF1F5; --muted:#97A2B3; --line:#242A33;
+      --accent:#3BE0C8; --accent-ink:#7CEBD9; --accent-soft:#0F2A28;
+      --warn:#F2B054; --good:#5FD08A; --bad:#F2727A;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0B0D10; --surface:#14171C; --surface-2:#1B1F26;
+    --ink:#EEF1F5; --muted:#97A2B3; --line:#242A33;
+    --accent:#3BE0C8; --accent-ink:#7CEBD9; --accent-soft:#0F2A28;
+    --warn:#F2B054; --good:#5FD08A; --bad:#F2727A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Archivo",system-ui,-apple-system,sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+  .stage{flex:1; position:relative; overflow:hidden}
+  .slide{
+    position:absolute; inset:0; overflow-y:auto;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:clamp(1.25rem,4vw,3.5rem);
+  }
+  .slide[hidden]{display:none!important}
+  .inner{width:100%; max-width:62rem; margin:0 auto}
+  @media (prefers-reduced-motion:no-preference){
+    .slide:not([hidden]) .inner{animation:rise .38s cubic-bezier(.2,.7,.2,1) both}
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .eyebrow{
+    font-family:"IBM Plex Mono",monospace; font-size:.72rem; font-weight:600;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--accent-ink);
+    margin:0 0 1rem;
+  }
+  h1{
+    font-size:clamp(1.9rem,5.2vw,3.5rem); line-height:1.04; font-weight:800;
+    letter-spacing:-.02em; margin:0; text-wrap:balance;
+  }
+  h2{
+    font-size:clamp(1.5rem,3.6vw,2.4rem); line-height:1.08; font-weight:700;
+    letter-spacing:-.015em; margin:0 0 1.1rem; text-wrap:balance;
+  }
+  .lede{font-size:clamp(1rem,1.7vw,1.2rem); line-height:1.5; color:var(--muted); max-width:44rem; margin:1.25rem 0 0}
+  p{margin:0}
+  .kw{color:var(--accent-ink)}
+  strong{font-weight:700}
+
+  .chips{display:flex; flex-wrap:wrap; gap:.5rem; margin-top:2rem}
+  .chip{
+    font-family:"IBM Plex Mono",monospace; font-size:.74rem; color:var(--muted);
+    border:1px solid var(--line); border-radius:999px; padding:.32rem .7rem; background:var(--surface);
+  }
+
+  ul.pts{list-style:none; padding:0; margin:1.5rem 0 0; display:flex; flex-direction:column; gap:.9rem}
+  ul.pts li{position:relative; padding-left:1.5rem; font-size:clamp(1rem,1.7vw,1.18rem); line-height:1.45; max-width:46rem}
+  ul.pts li::before{content:""; position:absolute; left:0; top:.55em; width:.5rem; height:.5rem; border-radius:2px; background:var(--accent)}
+
+  .callout{
+    margin-top:1.75rem; border-left:3px solid var(--warn); background:var(--surface);
+    padding:.9rem 1.1rem; border-radius:0 10px 10px 0; box-shadow:var(--shadow); max-width:44rem;
+  }
+  .callout .lbl{font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--warn); font-weight:600}
+
+  .big{font-size:clamp(1.25rem,2.6vw,1.75rem); line-height:1.35; font-weight:500; letter-spacing:-.01em; margin-top:.5rem; max-width:48rem}
+
+  /* diagram */
+  .diagram{margin-top:1.5rem; display:flex; flex-direction:column; gap:.55rem; max-width:52rem}
+  .node{
+    background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:.85rem 1rem; box-shadow:var(--shadow);
+  }
+  .node.source{border-color:var(--accent); background:var(--accent-soft)}
+  .node .nt{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:.95rem; color:var(--ink)}
+  .node .nd{font-size:.86rem; color:var(--muted); margin-top:.15rem}
+  .arrow{align-self:center; color:var(--muted); font-size:1.1rem; line-height:1}
+  .surfaces{display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.6rem}
+  .surfaces span{
+    font-family:"IBM Plex Mono",monospace; font-size:.74rem; color:var(--accent-ink);
+    background:var(--accent-soft); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius:6px; padding:.22rem .5rem;
+  }
+  .branch{display:grid; grid-template-columns:1fr 1fr; gap:.55rem}
+  @media (max-width:640px){ .branch{grid-template-columns:1fr} }
+
+  table{width:100%; border-collapse:collapse; margin-top:1.25rem; font-size:clamp(.9rem,1.5vw,1.02rem)}
+  th,td{text-align:left; padding:.7rem .6rem; border-bottom:1px solid var(--line); vertical-align:top}
+  thead th{font-family:"IBM Plex Mono",monospace; font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600}
+  td.chose{font-weight:600; color:var(--ink); white-space:nowrap}
+  td.over{color:var(--muted)}
+  .tbl-wrap{overflow-x:auto}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1.5rem}
+  @media (max-width:680px){ .grid2{grid-template-columns:1fr} }
+  .tile{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.2rem; box-shadow:var(--shadow)}
+  .tile .lever{font-weight:700; font-size:1.05rem; letter-spacing:-.01em; display:flex; align-items:center; gap:.5rem}
+  .tile .lever .dn{color:var(--good); font-family:"IBM Plex Mono",monospace; font-size:.85rem; border:1px solid color-mix(in srgb, var(--good) 40%, transparent); border-radius:6px; padding:.05rem .4rem}
+  .tile p{color:var(--muted); font-size:.95rem; line-height:1.45; margin-top:.5rem}
+
+  .role-row{display:grid; grid-template-columns:7.5rem 1fr 1fr; gap:.5rem 1rem; padding:.75rem 0; border-bottom:1px solid var(--line); align-items:start}
+  .role-row:first-of-type{border-top:1px solid var(--line)}
+  .role-row .r{font-family:"IBM Plex Mono",monospace; font-weight:600; color:var(--accent-ink); font-size:.95rem}
+  .role-row .j{font-weight:600; font-size:.95rem}
+  .role-row .v{color:var(--muted); font-size:.92rem; line-height:1.4}
+  @media (max-width:640px){
+    .role-row{grid-template-columns:1fr} .role-row .r{margin-bottom:.1rem}
+  }
+  .note{margin-top:1.1rem; font-size:.92rem; color:var(--muted); max-width:46rem}
+
+  ol.steps{margin:1.4rem 0 0; padding:0; list-style:none; counter-reset:s; display:flex; flex-direction:column; gap:.75rem}
+  ol.steps li{counter-increment:s; position:relative; padding-left:2.4rem; font-size:clamp(.98rem,1.6vw,1.12rem); line-height:1.4; max-width:48rem}
+  ol.steps li::before{
+    content:counter(s); position:absolute; left:0; top:-.1rem;
+    width:1.7rem; height:1.7rem; border-radius:8px; display:grid; place-items:center;
+    background:var(--accent); color:#fff; font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:.9rem;
+  }
+  :root[data-theme="dark"] ol.steps li::before, :root:not([data-theme="light"]) ol.steps li::before{color:#0B0D10}
+  code{font-family:"IBM Plex Mono",monospace; font-size:.9em; background:var(--surface-2); padding:.08em .38em; border-radius:5px}
+
+  .closer{font-size:clamp(1.4rem,3.2vw,2.1rem); line-height:1.15; font-weight:700; letter-spacing:-.015em; margin-top:1.5rem; text-wrap:balance; max-width:40rem}
+  .closer em{font-style:normal; color:var(--accent-ink)}
+
+  /* navbar */
+  .navbar{
+    display:flex; align-items:center; gap:1rem; padding:.7rem clamp(1rem,3vw,2rem);
+    padding-bottom:calc(.7rem + env(safe-area-inset-bottom,0px));
+    border-top:1px solid var(--line); background:var(--surface);
+  }
+  .dots{display:flex; gap:.4rem; flex:1; flex-wrap:wrap}
+  .dot{width:.55rem; height:.55rem; border-radius:999px; border:0; padding:0; background:var(--line); cursor:pointer}
+  .dot[aria-current="true"]{background:var(--accent); width:1.4rem}
+  .counter{font-family:"IBM Plex Mono",monospace; font-size:.8rem; color:var(--muted); min-width:3.2rem; text-align:right; font-variant-numeric:tabular-nums}
+  .nbtn{
+    font-family:"IBM Plex Mono",monospace; font-size:.78rem; color:var(--ink); background:var(--surface);
+    border:1px solid var(--line); border-radius:8px; padding:.4rem .6rem; cursor:pointer; line-height:1;
+  }
+  .nbtn:hover{border-color:var(--accent)}
+  button:focus-visible, .dot:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .hint{font-family:"IBM Plex Mono",monospace; font-size:.72rem; color:var(--muted)}
+  @media (max-width:560px){ .hint{display:none} }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1 · TITLE -->
+  <section class="slide" aria-label="Title">
+    <div class="inner">
+      <p class="eyebrow">Solutions Architect · Technical Screen</p>
+      <h1>One registry. One gate.<br>The whole team reads the <span class="kw">same change</span>.</h1>
+      <p class="lede">Ramping engineers onto a convention-heavy library, paid back in review round-trips — solved as convention-as-code, not another agent guide.</p>
+      <div class="chips">
+        <span class="chip">Runs offline</span>
+        <span class="chip">Overlay on a real fork</span>
+        <span class="chip">huggingface/diffusers · stand-in</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · PROBLEM -->
+  <section class="slide" hidden aria-label="Problem">
+    <div class="inner">
+      <p class="eyebrow">01 — The problem</p>
+      <h2>Ramp is paid in review round-trips.</h2>
+      <ul class="pts">
+        <li>The conventions already exist — scattered across docs, source patterns, tests, CI, and <code>.ai/AGENTS.md</code>.</li>
+        <li>A new engineer — human <em>or</em> agent — reassembles them by failing review.</li>
+        <li>The cost is senior-reviewer latency plus inconsistent first PRs. Not a missing tutorial.</li>
+      </ul>
+      <div class="callout">
+        <span class="lbl">The trap to avoid</span>
+        <p style="margin-top:.35rem">A tool per SDLC step — that manufactures five sources of truth in a month.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · THE IDEA -->
+  <section class="slide" hidden aria-label="The idea">
+    <div class="inner">
+      <p class="eyebrow">02 — The one decision</p>
+      <h2>Conventions become data.</h2>
+      <p class="big">One registry — <code>conventions/rules.yaml</code> — and every surface is <em>generated</em> from it. Edit one file; the agent's rules, the reviewer's checklist, the PM's Definition of Done, and CI <span class="kw">cannot disagree</span>.</p>
+      <p class="lede">And the unit is the <strong>change</strong>, not the rule — each rule carries an <code>owner</code>, so every role co-authors the same list.</p>
+    </div>
+  </section>
+
+  <!-- 4 · ARCHITECTURE -->
+  <section class="slide" hidden aria-label="Architecture">
+    <div class="inner">
+      <p class="eyebrow">03 — Architecture</p>
+      <h2>Humans edit one file. Machines render the rest.</h2>
+      <div class="diagram">
+        <div class="node source">
+          <div class="nt">conventions/rules.yaml</div>
+          <div class="nd">id · owner · check · severity · Definition of Done — the single source of truth</div>
+        </div>
+        <div class="arrow" aria-hidden="true">↓</div>
+        <div class="branch">
+          <div class="node">
+            <div class="nt">build_projections.py</div>
+            <div class="nd">renders every audience surface</div>
+            <div class="surfaces">
+              <span>agent rules</span><span>AGENTS.md</span><span>PM DoD</span><span>QA checklist</span><span>CI YAML</span><span>GrokBot specs</span>
+            </div>
+          </div>
+          <div class="node">
+            <div class="nt">convention_check.py</div>
+            <div class="nd">one AST + regex gate — editor hook = pre-PR = CI. Exit code = blocking findings.</div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Live write lands on a <strong>fork</strong> of the library; the overlay attaches without rewriting upstream <code>AGENTS.md</code> / <code>.ai/</code>. On the fork the gate is file-scoped, and the default MCP is empty so Cloud launches never stall on OAuth.</p>
+    </div>
+  </section>
+
+  <!-- 5 · MULTI-AUDIENCE -->
+  <section class="slide" hidden aria-label="Multiple audiences">
+    <div class="inner">
+      <p class="eyebrow">04 — One solution, many audiences</p>
+      <h2>Same change. A view per role.</h2>
+      <div class="role-row"><div class="r">dev / arch</div><div class="j">Correct, conventional code</div><div class="v">In-editor gate + scaffold from a template &amp; two reference source files.</div></div>
+      <div class="role-row"><div class="r">qa</div><div class="j">Is the risk covered?</div><div class="v">Test-adequacy gates + a risk briefing: what's enforced vs the unverified surface (the math).</div></div>
+      <div class="role-row"><div class="r">pm</div><div class="j">In scope, on track?</div><div class="v">A live Definition of Done — the exact checks CI will run, not a printed list.</div></div>
+      <div class="role-row"><div class="r">devops</div><div class="j">Moves safely to release?</div><div class="v">A GPU-less CI job, drift detection, and contract re-verification.</div></div>
+      <p class="note"><strong>GrokBot</strong> agents are the read-side: generated from the same registry, they translate gate output for a role — and never gate. Multiplicity of <em>readers</em>, one source of truth.</p>
+    </div>
+  </section>
+
+  <!-- 6 · TRADEOFFS -->
+  <section class="slide" hidden aria-label="Tradeoffs">
+    <div class="inner">
+      <p class="eyebrow">05 — Key tradeoffs</p>
+      <h2>What I chose, and what I gave up.</h2>
+      <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Chose</th><th>Over</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td class="chose">Registry + AST gate</td><td class="over">A bot that "knows" the conventions</td><td>Memory and docs drift; source plus a validator do not.</td></tr>
+          <tr><td class="chose">Empty default MCP</td><td class="over">Hub HTTP / stdio at launch</td><td>An OAuth or cwd failure in a 45-minute demo is unrecoverable.</td></tr>
+          <tr><td class="chose">Scaffold the contract</td><td class="over">Inventing the sampler math</td><td>Fake numerics pass the gate and fail the reviewer.</td></tr>
+          <tr><td class="chose">Owner tags + GrokBot sim</td><td class="over">A bot per SDLC stage</td><td>One truth; multiple readers are fine, multiple truths aren't.</td></tr>
+          <tr><td class="chose">Stop at CI clearance</td><td class="over">A fake deploy</td><td>No customer env or auth model. Green gate = merge-eligible.</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · VALUE -->
+  <section class="slide" hidden aria-label="Business value">
+    <div class="inner">
+      <p class="eyebrow">06 — Business value</p>
+      <h2>Two levers a platform lead already reports.</h2>
+      <div class="grid2">
+        <div class="tile">
+          <div class="lever">Review round-trips / first PR <span class="dn">↓</span></div>
+          <p>The gate removes the mechanical bounce — moved import, missing mixin, empty test — before a senior ever looks.</p>
+        </div>
+        <div class="tile">
+          <div class="lever">Time-to-first-merge <span class="dn">↓</span></div>
+          <p>A correct scaffold from day one. First PRs fail on the paper, not on a missing <code>SchedulerMixin</code>.</p>
+        </div>
+      </div>
+      <p class="note">Grounded, not guessed: the scheduler contract (<code>set_timesteps</code> / <code>step</code>) was verified against real source across three schedulers — not the stale philosophy doc that still says <code>set_num_inference_steps</code>.</p>
+    </div>
+  </section>
+
+  <!-- 8 · DEMO -->
+  <section class="slide" hidden aria-label="Live demo">
+    <div class="inner">
+      <p class="eyebrow">07 — Live in the room</p>
+      <h2>Kit first, then the fork.</h2>
+      <ol class="steps">
+        <li><strong>Catch the bad</strong> — the gate flags <code>examples/candidate_scheduler</code> by rule id, with fixes.</li>
+        <li><strong>Ground</strong> — read <code>scheduling_ddpm.py</code> / <code>scheduling_euler_discrete.py</code>: <code>set_timesteps</code> + <code>step</code>.</li>
+        <li><strong>Scaffold</strong> — <code>/scaffold scheduler EulerLite</code>; leave <code>TODO(engineer)</code> for the math.</li>
+        <li><strong>Green</strong> — file-scoped gate passes; <code>make grokbot ROLE=qa</code>. Never <code>--all</code> the library.</li>
+      </ol>
+      <p class="note">A runnable artifact, not slideware — the commands live in <code>docs/LIVE_DEMO.md</code>.</p>
+    </div>
+  </section>
+
+  <!-- 9 · NEXT + CLOSE -->
+  <section class="slide" hidden aria-label="Next steps">
+    <div class="inner">
+      <p class="eyebrow">08 — Owned by the team, not by me</p>
+      <ul class="pts">
+        <li>A new component (<code>model</code>, <code>pipeline</code>) = registry rows + a template. No new machinery.</li>
+        <li>Drift detection + contract re-verification keep it honest as the library evolves.</li>
+        <li>GrokBot read-views per role; mechanical auto-fix later — never on numerics.</li>
+      </ul>
+      <p class="closer">First PRs fail on the <em>math</em> — the reviewer's job — not on a missing <code>SchedulerMixin</code>.</p>
+    </div>
+  </section>
+
+</div>
+
+<nav class="navbar" aria-label="Slide navigation">
+  <button class="nbtn" id="prev" aria-label="Previous slide">← Prev</button>
+  <div class="dots" id="dots" role="tablist" aria-label="Slides"></div>
+  <span class="hint">← → to move</span>
+  <span class="counter" id="counter">1 / 9</span>
+  <button class="nbtn" id="next" aria-label="Next slide">Next →</button>
+  <button class="nbtn" id="theme" aria-label="Toggle theme" title="Toggle light / dark">◐</button>
+</nav>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var n = slides.length, i = 0;
+  var counter = document.getElementById("counter");
+  var dotsWrap = document.getElementById("dots");
+
+  var dots = slides.map(function(_, k){
+    var b = document.createElement("button");
+    b.className = "dot"; b.type = "button";
+    b.setAttribute("role","tab");
+    b.setAttribute("aria-label","Go to slide " + (k+1));
+    b.addEventListener("click", function(){ show(k); });
+    dotsWrap.appendChild(b);
+    return b;
+  });
+
+  function show(k){
+    i = (k + n) % n;
+    slides.forEach(function(s, idx){ s.hidden = idx !== i; });
+    dots.forEach(function(d, idx){ d.setAttribute("aria-current", idx === i ? "true" : "false"); });
+    counter.textContent = (i+1) + " / " + n;
+    var cur = slides[i]; if (cur) cur.scrollTop = 0;
+  }
+  function next(){ show(i+1); }
+  function prev(){ show(i-1); }
+
+  document.getElementById("next").addEventListener("click", next);
+  document.getElementById("prev").addEventListener("click", prev);
+
+  document.addEventListener("keydown", function(e){
+    if (e.key === "ArrowRight" || e.key === "PageDown"){ next(); e.preventDefault(); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp"){ prev(); e.preventDefault(); }
+    else if (e.key === "Home"){ show(0); e.preventDefault(); }
+    else if (e.key === "End"){ show(n-1); e.preventDefault(); }
+  });
+
+  // click on the stage advances; clicking an interactive element does not
+  document.getElementById("stage").addEventListener("click", function(e){
+    if (e.target.closest("button, a, .dot")) return;
+    next();
+  });
+
+  // theme toggle: cycle explicit light/dark, default follows system
+  var theme = document.getElementById("theme");
+  theme.addEventListener("click", function(){
+    var root = document.documentElement;
+    var cur = root.getAttribute("data-theme");
+    var mql = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+    if (!cur){ cur = (mql && mql.matches) ? "dark" : "light"; }
+    root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+  });
+
+  show(0);
+})();
+</script>
+</body>
+</html>
