@@ -93,7 +93,10 @@ python3 ramp-kit/tools/docs_mcp_server.py --query "scheduler set_timesteps step"
 
 If `/scaffold` does not appear: open `.cursor/commands/scaffold.md` and say “it’s a guided command, not a binary,” then Path B.
 
-Open the PR **on this fork**, draft, title `[fork demo — not for upstream]`.
+Open the PR **on this fork**, draft, **base `main`**, title
+`[fork demo — not for upstream]`. Overlay CI (`overlay-gate`) only runs when
+the base already has `ramp-kit-overlay.yml` — that is `main`, not a stacked
+topic branch.
 
 ---
 

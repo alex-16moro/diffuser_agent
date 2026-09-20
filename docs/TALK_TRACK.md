@@ -63,7 +63,7 @@ open on the fork until they have seen the registry and the gate.
    `TODO(engineer)` in `step`. "Contract, not the algorithm."
 3. **File-scoped gate only** — never `--all` on this library. 0 findings on the
    new file; behavioral tests skip without torch.
-4. **PR this fork**, draft, title `[fork demo — not for upstream]`. Overlay
+4. **PR this fork**, draft, **base `main`**, title `[fork demo — not for upstream]`. Overlay
    clearance ≠ Hugging Face CI. We do **not** delete inherited workflow files.
 
 Do not run kit `KEEP=1` before the fork agent if you want those files to appear

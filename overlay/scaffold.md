@@ -29,8 +29,12 @@ Cite provenance if you run that. Do not read or copy
 
 ## 1. Paths (library layout, not the kit stand-in)
 
-- Implementation: `src/diffusers/schedulers/scheduling_euler_lite.py`
-- Test: `tests/schedulers/test_scheduling_euler_lite.py`
+Convert `$2` to snake_case (`HeunLite` → `heun_lite`). The class is `$2Scheduler`.
+
+- Implementation: `src/diffusers/schedulers/scheduling_<snake>.py`
+- Test: `tests/schedulers/test_scheduling_<snake>.py`
+
+If `scheduling_euler_lite.py` already exists, do not overwrite it — use a new `$2`.
 
 ## 2. Copy from the overlay templates
 
@@ -48,9 +52,11 @@ assertions, same-seed determinism, and shape/dtype checks.
 
 ```bash
 python3 ramp-kit/tools/convention_check.py ramp-kit/examples/candidate_scheduler
-python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_euler_lite.py
-python3 -m unittest tests.schedulers.test_scheduling_euler_lite -v
+python3 ramp-kit/tools/convention_check.py src/diffusers/schedulers/scheduling_<snake>.py
+python3 -m unittest tests.schedulers.test_scheduling_<snake> -v
 ```
 
 Catch-early uses the kit fixture path. Stop at 0 blocking. Do not fabricate numerics.
-Do not open a PR against huggingface/diffusers — PR this fork.
+Do not open a PR against huggingface/diffusers — PR this fork, **draft, base `main`**
+(so `.github/workflows/ramp-kit-overlay.yml` runs). Two files only: scheduler + test.
+No public-API export, no docs, no sampler math.
