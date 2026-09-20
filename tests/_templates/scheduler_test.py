@@ -96,6 +96,7 @@ class TestBehavioralContract(unittest.TestCase):
         out = s.step(torch.ones_like(sample), 1, sample, generator=torch.Generator().manual_seed(0))
         self.assertTrue(hasattr(out, "prev_sample"))
         self.assertEqual(out.prev_sample.shape, sample.shape)
+        self.assertEqual(out.prev_sample.dtype, sample.dtype)
 
     def test_same_seed_same_output(self):
         import torch

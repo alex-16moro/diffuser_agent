@@ -14,6 +14,7 @@ DEMO_RULE = '''
   - id: DEMO001
     component: any
     source_type: customer
+    owner: devops
     title: "DEMO: added live to prove one-edit propagation"
     applies_to: ["src/diffusers/**"]
     severity: warn

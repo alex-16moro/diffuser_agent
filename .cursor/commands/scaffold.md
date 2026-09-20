@@ -59,6 +59,7 @@ Read `conventions/rules.yaml`. Blocking rules must pass:
 - DEPR001 current import paths
 - MUT001 no mutable defaults
 - TEST001 matching test that exercises the contract
+- TEST002 assertions + same-seed determinism + shape/dtype
 
 ## 5. Run the gate until clean
 

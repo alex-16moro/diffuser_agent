@@ -142,7 +142,10 @@ def main(argv: list[str] | None = None) -> int:
     run([PYTHON, "-m", "unittest", test_mod, "-v"])
 
     step(6, "Path to production — same rules, other audiences")
-    print("QA:  projections/qa/review-checklist.md  (math stays human)")
+    print(
+        "QA:  projections/qa/review-checklist.md  (math stays human)\n"
+        "     GrokBot sim: python tools/grokbot_sim.py --role qa < gate.json"
+    )
     print("PM:  projections/pm/definition-of-done.md + issue template")
     print("CI:  .github/workflows/convention-gate.yml  (green = merge-eligible)")
     print("Boundary: .cursorignore hides examples/candidate_scheduler/")

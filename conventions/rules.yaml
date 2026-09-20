@@ -25,8 +25,10 @@
 
 meta:
   library: huggingface/diffusers
-  registry_version: "0.6.0"
+  registry_version: "0.7.0"
   build_target: cursor
+  # owner: who co-authors this rule in the ONE registry (dev|architect|qa|pm|devops).
+  # GrokBot role-agents are READ-side views of owner-tagged rows; they never gate.
   upstream_conventions:
     - "docs: conceptual/contribution.md (# Copied from, tests, make style/quality)"
     - "docs: conceptual/philosophy.md (single-file policy)"
@@ -55,6 +57,7 @@ rules:
   - id: SCHED001
     component: scheduler
     source_type: upstream
+    owner: architect
     title: "Schedulers inherit SchedulerMixin and ConfigMixin"
     applies_to: ["src/diffusers/schedulers/scheduling_*.py", "examples/**/scheduling_*.py"]
     severity: block
@@ -71,6 +74,7 @@ rules:
   - id: SCHED002
     component: scheduler
     source_type: upstream
+    owner: architect
     title: "Schedulers implement the step() / set_timesteps() contract"
     applies_to: ["src/diffusers/schedulers/scheduling_*.py", "examples/**/scheduling_*.py"]
     severity: block
@@ -92,6 +96,7 @@ rules:
   - id: SCHED003
     component: scheduler
     source_type: upstream
+    owner: architect
     title: "Scheduler __init__ is decorated with @register_to_config"
     applies_to: ["src/diffusers/schedulers/scheduling_*.py", "examples/**/scheduling_*.py"]
     severity: block
@@ -108,6 +113,7 @@ rules:
   - id: REPRO001
     component: any
     source_type: upstream
+    owner: dev
     title: "Randomness threads through a generator, never global RNG"
     applies_to: ["src/diffusers/**", "examples/**"]
     severity: block
@@ -124,6 +130,7 @@ rules:
   - id: DEVICE001
     component: any
     source_type: upstream
+    owner: devops
     title: "No hardcoded CUDA/device placement"
     applies_to: ["src/diffusers/**", "examples/**"]
     severity: block
@@ -143,6 +150,7 @@ rules:
   - id: DEPR001
     component: any
     source_type: upstream
+    owner: architect
     title: "No deprecated/moved import paths"
     applies_to: ["src/diffusers/**", "examples/**", "tests/**"]
     severity: block
@@ -168,6 +176,7 @@ rules:
   - id: DEPR002
     component: any
     source_type: upstream
+    owner: architect
     title: "Avoid deprecated kwargs (verify per release)"
     applies_to: ["src/diffusers/**", "examples/**"]
     severity: warn
@@ -188,6 +197,7 @@ rules:
   - id: IMPORT001
     component: scheduler
     source_type: upstream
+    owner: architect
     title: "Schedulers stay self-contained (no heavy util imports)"
     applies_to: ["src/diffusers/schedulers/scheduling_*.py", "examples/**/scheduling_*.py"]
     severity: warn
@@ -206,6 +216,7 @@ rules:
   - id: COPY001
     component: any
     source_type: upstream
+    owner: architect
     title: "# Copied from markers are well-formed"
     applies_to: ["src/diffusers/**"]
     severity: warn
@@ -222,6 +233,7 @@ rules:
   - id: MUT001
     component: any
     source_type: upstream
+    owner: dev
     title: "No mutable default arguments"
     applies_to: ["src/diffusers/**", "examples/**"]
     severity: block
@@ -237,6 +249,7 @@ rules:
   - id: LOG001
     component: any
     source_type: upstream
+    owner: devops
     title: "Library code logs, it does not print()"
     applies_to: ["src/diffusers/**", "examples/**/scheduling_*.py"]
     severity: warn
@@ -254,6 +267,7 @@ rules:
   - id: DOC001
     component: any
     source_type: upstream
+    owner: pm
     title: "Public methods have docstrings"
     applies_to: ["src/diffusers/**", "examples/**/scheduling_*.py"]
     severity: warn
@@ -269,6 +283,7 @@ rules:
   - id: TEST001
     component: scheduler
     source_type: upstream
+    owner: qa
     title: "New schedulers/models ship with a matching test file"
     applies_to: ["src/diffusers/schedulers/scheduling_*.py", "examples/**/scheduling_*.py"]
     severity: block
@@ -285,12 +300,38 @@ rules:
     review_prompt: "Is there a test file covering the new scheduler?"
     dod: "Scheduler has a test that runs in CI (not @slow)."
 
+  - id: TEST002
+    component: scheduler
+    source_type: upstream
+    owner: qa
+    title: "Scheduler tests assert behaviour, not just presence"
+    applies_to:
+      - "src/diffusers/schedulers/scheduling_*.py"
+      - "examples/**/scheduling_*.py"
+      - "tests/schedulers/test_scheduling_*.py"
+    severity: block
+    check: test_adequacy
+    params:
+      test_glob: "tests/schedulers/test_{stem}.py"
+      require_assertions: true
+      require_determinism: true
+      require_shape_dtype: true
+    rationale: >
+      Presence of a test file is not enough. A test_* function with zero assertions
+      is a dummy. New scheduler tests must include a same-seed determinism assertion
+      and a shape/dtype assertion so CI actually pins the contract TEST001 only names.
+    source: "conceptual/contribution.md (PR rule 9: high-coverage tests); QA strengthening"
+    agent_hint: "Each test_* function must assert. Include same-seed determinism (torch.equal) and shape plus dtype checks (see tests/_templates/scheduler_test.py)."
+    review_prompt: "Does the scheduler test assert determinism and shape/dtype, with no empty test functions?"
+    dod: "Scheduler tests have assertions, including same-seed determinism and shape/dtype."
+
   # ---- Customer guardrails (source_type: customer) --------------------------
   # These are NOT diffusers conventions — they are example org policies layered
   # on top, to show the two-tier model. A customer edits/extends this section.
   - id: CUST001
     component: any
     source_type: customer
+    owner: devops
     title: "No debugging leftovers committed"
     applies_to: ["src/diffusers/**", "examples/**"]
     severity: warn
@@ -305,3 +346,4 @@ rules:
     agent_hint: "Remove breakpoint()/pdb before committing."
     review_prompt: "Any debugger leftovers (breakpoint/pdb)?"
     dod: "No debugger calls in committed code."
+

@@ -15,6 +15,10 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Convention gate
         run: python tools/convention_check.py --all
+      - name: Projection drift
+        run: python tools/build_projections.py && git diff --exit-code
+      - name: Scheduler contract re-verify
+        run: python tools/verify_scheduler_contract.py
       - name: MCP doc-server self-test
         run: python tools/docs_mcp_server.py --selftest
       - name: Contract tests

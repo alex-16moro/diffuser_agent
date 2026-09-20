@@ -4,7 +4,7 @@ alwaysApply: true
 ---
 <!-- GENERATED from conventions/rules.yaml by tools/build_projections.py. DO NOT EDIT. Run `make build`. -->
 
-# diffusers conventions (registry v0.6.0)
+# diffusers conventions (registry v0.7.0)
 
 You are contributing to `huggingface/diffusers`. Follow these conventions.
 They mirror the project's own `.ai/` rules and are enforced by
