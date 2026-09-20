@@ -14,7 +14,8 @@ These were made before this submission pass. Do not silently reopen them.
 3. **GrokBot is read-side.** Per-audience agents brief a first-contribution
    PR (QA testing risk, PM timeline/dependencies, DevOps CI/CD). They never
    gate. The **repo spec** (`agents/grokbot-*.md`) wins; Edit Profile is a
-   stub. Trigger: PR opened / updated, not merge.
+   stub. Trigger: PR opened / updated, not merge. Optional DevOps-only
+   follow-up on merge (landed-on-main note).
 
 4. **Gate is file-scoped on the library fork.** Never `convention_check.py --all`
    on the full diffusers tree.

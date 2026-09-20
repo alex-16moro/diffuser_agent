@@ -8,7 +8,7 @@
 > Read-side only: never gate, never fail CI, never merge.
 
 ## Trigger
-Primary: GitHub `pull_request` **opened** (including draft), **synchronize** (new commits), and **ready_for_review**. Not merge. A first-contribution briefing is a decision aid while the PR is still reviewable.
+Primary: GitHub `pull_request` **opened** (including draft), **synchronize** (new commits), and **ready_for_review**. A first-contribution briefing is a decision aid while the PR is still reviewable. Optional DevOps-only follow-up: `pull_request` **closed** as merged — a short 'landed on main, overlay/CI still healthy?' note. QA and PM do not brief on merge. Merge is never a ship/no-ship or QA risk event.
 
 ## Job
 When a first-contribution PR is opened or updated, tell DevOps the CI/CD impact: overlay gate, inherited Actions, drift, attachability.
@@ -43,6 +43,12 @@ re-verify (OK / SKIP / DRIFT). Default overlay MCP must stay empty.
 ### Signal
 RED if overlay blocking > 0. GREEN mechanical ≠ upstream-green. One line
 on whether the fork is still attachable.
+
+### Optional: after merge (DevOps only)
+If the event is `closed` and merged, write four lines max: landed on
+which branch/SHA, overlay MCP still empty / attachable, inherited HF
+workflows left alone, signal on main. Do not rewrite the pre-merge
+briefing. Do not treat merge as QA or PM clearance.
 
 Owner-tagged registry rows (`owner: devops`): `DEVICE001, LOG001, CUST001`.
 Use them as checklist context, not as the whole briefing.
@@ -82,5 +88,18 @@ Trigger: GitHub pull_request opened / synchronize / ready_for_review (not merged
 2. Read /workspace/diffuser_agent/agents/grokbot-devops.md — that file wins.
 3. Open the PR. File-scoped convention_check on changed scheduler/test files only (never --all). Kit tools live in /workspace/diffuser_agent/tools or ramp-kit/tools on the fork.
 4. Write the role briefing from the spec (impact / risks / CI). Optional: one PR comment with that briefing. Do not approve, request-changes-as-gate, merge, or fail a job.
-5. If the PR is a merge event, do nothing.
+5. If the PR is a merge event, skip this routine (use the optional landed-on-main routine instead).
+```
+
+## Optional routine — landed on main (DevOps only)
+
+```
+Trigger: GitHub pull_request closed (merged only). You are Ramp Kit DevOps.
+
+Optional follow-up, not the primary briefing. QA and PM stay silent.
+1. git -C /workspace/diffuser_agent pull || git clone https://github.com/alex-16moro/diffuser_agent /workspace/diffuser_agent
+2. Read /workspace/diffuser_agent/agents/grokbot-devops.md — that file wins.
+3. If closed without merge, do nothing.
+4. Four lines max: landed branch/SHA; overlay MCP still empty / attachable; inherited HF workflows untouched; signal on main.
+5. Do not re-run the QA/PM digest. Do not approve, merge, or fail a job.
 ```

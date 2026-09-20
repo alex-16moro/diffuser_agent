@@ -8,7 +8,7 @@
 > Read-side only: never gate, never fail CI, never merge.
 
 ## Trigger
-Primary: GitHub `pull_request` **opened** (including draft), **synchronize** (new commits), and **ready_for_review**. Not merge. A first-contribution briefing is a decision aid while the PR is still reviewable.
+Primary: GitHub `pull_request` **opened** (including draft), **synchronize** (new commits), and **ready_for_review**. A first-contribution briefing is a decision aid while the PR is still reviewable. QA and PM do not brief on merge.
 
 ## Job
 When a first-contribution PR is opened or updated, tell PM the impact on timelines, project risks, and dependencies — in one minute.

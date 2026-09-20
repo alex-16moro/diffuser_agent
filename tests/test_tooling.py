@@ -310,6 +310,10 @@ class TestGrokbotIphonePack(unittest.TestCase):
         self.assertIn("Timeline", pm)
         self.assertIn("CI/CD", devops)
         self.assertIn("opened", qa.lower())
+        self.assertIn("do not brief on merge", qa.lower())
+        self.assertIn("do not brief on merge", pm.lower())
+        self.assertIn("Optional: after merge", devops)
+        self.assertIn("closed", devops.lower())
         for role in ("qa", "pm", "devops"):
             agent = ROOT / ".cursor" / "agents" / f"grokbot-{role}.md"
             self.assertTrue(agent.is_file(), agent)

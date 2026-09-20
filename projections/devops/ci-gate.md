@@ -25,7 +25,8 @@ python tools/convention_check.py --all   # human-readable, sets exit code
   fails if fork reference source drifted from SCHED001–003.
 - Rules carry an `owner` tag (`dev` / `architect` / `qa` / `pm` / `devops`).
   GrokBot role-agents brief a first-contribution PR for that owner; they never gate.
-  Specs: `agents/grokbot-*.md` (repo wins). Trigger: PR opened, not merge.
+  Specs: `agents/grokbot-*.md` (repo wins). Trigger: PR opened/updated.
+  Optional DevOps-only: closed-as-merged landed note.
 
 ## Owner-tagged rules (devops)
 - `DEVICE001` No hardcoded CUDA/device placement (block)

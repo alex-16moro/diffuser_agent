@@ -52,8 +52,13 @@ KIT_DIR = "/workspace/diffuser_agent"
 GROKBOT_PACK_ORDER = ("qa", "pm", "devops")
 GROKBOT_TRIGGER = (
     "Primary: GitHub `pull_request` **opened** (including draft), **synchronize** "
-    "(new commits), and **ready_for_review**. Not merge. A first-contribution "
-    "briefing is a decision aid while the PR is still reviewable."
+    "(new commits), and **ready_for_review**. A first-contribution briefing is a "
+    "decision aid while the PR is still reviewable."
+)
+GROKBOT_TRIGGER_DEVOPS_MERGE = (
+    "Optional DevOps-only follow-up: `pull_request` **closed** as merged — a "
+    "short 'landed on main, overlay/CI still healthy?' note. QA and PM do not "
+    "brief on merge. Merge is never a ship/no-ship or QA risk event."
 )
 GROKBOT_ROLES = {
     "pm": {
@@ -165,7 +170,13 @@ re-verify (OK / SKIP / DRIFT). Default overlay MCP must stay empty.
 
 ### Signal
 RED if overlay blocking > 0. GREEN mechanical ≠ upstream-green. One line
-on whether the fork is still attachable.""",
+on whether the fork is still attachable.
+
+### Optional: after merge (DevOps only)
+If the event is `closed` and merged, write four lines max: landed on
+which branch/SHA, overlay MCP still empty / attachable, inherited HF
+workflows left alone, signal on main. Do not rewrite the pre-merge
+briefing. Do not treat merge as QA or PM clearance.""",
     },
 }
 
@@ -463,7 +474,8 @@ def build_devops():
         "  fails if fork reference source drifted from SCHED001–003.",
         "- Rules carry an `owner` tag (`dev` / `architect` / `qa` / `pm` / `devops`).",
         "  GrokBot role-agents brief a first-contribution PR for that owner; they never gate.",
-        "  Specs: `agents/grokbot-*.md` (repo wins). Trigger: PR opened, not merge.",
+        "  Specs: `agents/grokbot-*.md` (repo wins). Trigger: PR opened/updated.",
+        "  Optional DevOps-only: closed-as-merged landed note.",
         "",
         "## Owner-tagged rules (devops)",
     ]
@@ -536,8 +548,25 @@ def _owned_ids(role: str) -> str:
     return ", ".join(ids) if ids else "(none)"
 
 
+def _trigger_text(role: str) -> str:
+    if role == "devops":
+        return GROKBOT_TRIGGER + " " + GROKBOT_TRIGGER_DEVOPS_MERGE
+    return GROKBOT_TRIGGER + " QA and PM do not brief on merge."
+
+
 def _grokbot_profile_description(role: str, spec: dict) -> str:
     """Short Edit Profile stub. The long spec lives in agents/grokbot-<role>.md."""
+    if role == "devops":
+        trigger = (
+            "Trigger: GitHub pull_request opened (including draft), synchronize, "
+            "or ready_for_review. Optional follow-up: closed-as-merged, four-line "
+            "landed note only. Never treat merge as a ship decision."
+        )
+    else:
+        trigger = (
+            "Trigger: GitHub pull_request opened (including draft), synchronize, "
+            "or ready_for_review. Do not brief on merge."
+        )
     return (
         f"You are {spec['bot_name']}.\n\n"
         "Standing orders — do not violate:\n"
@@ -546,26 +575,45 @@ def _grokbot_profile_description(role: str, spec: dict) -> str:
         f"`git -C {KIT_DIR} pull`.\n"
         f"- Read `{KIT_DIR}/agents/grokbot-{role}.md` and follow THAT file. "
         "It wins over this description and over memory of older instructions.\n"
-        "- Trigger: GitHub pull_request opened (including draft), synchronize, "
-        "or ready_for_review. Do not brief on merge.\n"
+        f"- {trigger}\n"
         f"- Job: {spec['job']}\n"
         "- Keep iPhone replies short. One briefing per PR event."
     )
 
 
 def _grokbot_first_message(role: str, spec: dict) -> str:
+    merge_line = (
+        "3. Confirm: role, PR-opened trigger, optional closed-as-merged "
+        "landed note only, never gate/merge.\n"
+        if role == "devops"
+        else "3. Confirm: role, PR-opened trigger (not merge), never gate/merge.\n"
+    )
+    wait_line = (
+        "4. Wait for a PR URL (kit or alex-16moro/diffusers). On opened/"
+        "synchronize/ready_for_review, pull again, re-read the spec, brief."
+        + (
+            " On merged, four-line landed note only."
+            if role == "devops"
+            else " On merge, do nothing."
+        )
+    )
     return (
         f"You are {spec['bot_name']}. From now on the repo spec wins.\n\n"
         f"1. Clone {KIT_REPO} into {KIT_DIR} if missing, then "
         f"`git -C {KIT_DIR} pull`.\n"
         f"2. Read {KIT_DIR}/agents/grokbot-{role}.md. Ignore older instructions.\n"
-        "3. Confirm: role, PR-opened trigger (not merge), never gate/merge.\n"
-        "4. Wait for a PR URL (kit or alex-16moro/diffusers). On opened/"
-        "synchronize/ready_for_review, pull again, re-read the spec, brief."
+        + merge_line
+        + wait_line
     )
 
 
 def _grokbot_routine(role: str, spec: dict) -> str:
+    extra = (
+        "5. If the PR is a merge event, skip this routine (use the optional "
+        "landed-on-main routine instead)."
+        if role == "devops"
+        else "5. If the PR is a merge event, do nothing."
+    )
     return (
         f"Trigger: GitHub pull_request opened / synchronize / ready_for_review "
         f"(not merged). You are {spec['bot_name']}.\n\n"
@@ -577,7 +625,20 @@ def _grokbot_routine(role: str, spec: dict) -> str:
         "4. Write the role briefing from the spec (impact / risks / CI). "
         "Optional: one PR comment with that briefing. Do not approve, "
         "request-changes-as-gate, merge, or fail a job.\n"
-        "5. If the PR is a merge event, do nothing."
+        + extra
+    )
+
+
+def _grokbot_merge_routine() -> str:
+    return (
+        "Trigger: GitHub pull_request closed (merged only). You are Ramp Kit DevOps.\n\n"
+        "Optional follow-up, not the primary briefing. QA and PM stay silent.\n"
+        f"1. git -C {KIT_DIR} pull || git clone {KIT_REPO} {KIT_DIR}\n"
+        f"2. Read {KIT_DIR}/agents/grokbot-devops.md — that file wins.\n"
+        "3. If closed without merge, do nothing.\n"
+        "4. Four lines max: landed branch/SHA; overlay MCP still empty / "
+        "attachable; inherited HF workflows untouched; signal on main.\n"
+        "5. Do not re-run the QA/PM digest. Do not approve, merge, or fail a job."
     )
 
 
@@ -595,7 +656,7 @@ def build_grokbot_specs():
             "> Read-side only: never gate, never fail CI, never merge.",
             "",
             "## Trigger",
-            GROKBOT_TRIGGER,
+            _trigger_text(role),
             "",
             "## Job",
             spec["job"],
@@ -647,6 +708,15 @@ def build_grokbot_specs():
             "```",
             "",
         ])
+        if role == "devops":
+            lines.extend([
+                "## Optional routine — landed on main (DevOps only)",
+                "",
+                "```",
+                _grokbot_merge_routine(),
+                "```",
+                "",
+            ])
         write(ROOT / "agents" / f"grokbot-{role}.md", "\n".join(lines))
     build_grokbot_profiles()
     build_cursor_grokbot_agents()
@@ -664,8 +734,9 @@ def build_grokbot_profiles():
         "Name/Title/standing orders change. Full briefing text: those spec",
         "files. Steps: `docs/GROKBOT.md`.",
         "",
-        "Trigger: **PR opened / synchronize / ready_for_review**, not merge.",
-        "Never gate. Never merge.",
+        "Trigger: **PR opened / synchronize / ready_for_review** for all three.",
+        "Optional DevOps-only: **closed as merged** (four-line landed note).",
+        "QA and PM do not brief on merge. Never gate. Never merge a PR.",
         "",
         f"Kit: `{KIT_REPO}`",
         "",
@@ -700,6 +771,15 @@ def build_grokbot_profiles():
             "```",
             "",
         ])
+        if role == "devops":
+            lines.extend([
+                "**Optional routine** (desktop: pull_request closed / merged):",
+                "",
+                "```",
+                _grokbot_merge_routine(),
+                "```",
+                "",
+            ])
     lines.extend([
         "---",
         "",
@@ -732,7 +812,12 @@ def build_cursor_grokbot_agents():
             f"You are {spec['bot_name']} ({spec['title']}).",
             "",
             f"Authoritative spec: `agents/grokbot-{role}.md` (re-read it).",
-            "Trigger: pull_request opened / synchronize / ready_for_review — not merge.",
+            (
+                "Trigger: pull_request opened / synchronize / ready_for_review. "
+                "Optional: closed-as-merged four-line landed note."
+                if role == "devops"
+                else "Trigger: pull_request opened / synchronize / ready_for_review — not merge."
+            ),
             "Never gate, never fail a job, never merge.",
             "",
             f"Job: {spec['job']}",
