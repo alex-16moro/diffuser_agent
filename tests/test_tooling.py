@@ -55,7 +55,7 @@ class TestLibraryPaths(unittest.TestCase):
 
 
 class TestMcpFraming(unittest.TestCase):
-    def test_selftest_uses_content_length(self):
+    def test_selftest_emits_ndjson(self):
         proc = subprocess.run(
             [sys.executable, str(ROOT / "tools" / "docs_mcp_server.py"), "--selftest"],
             cwd=ROOT,
@@ -64,7 +64,9 @@ class TestMcpFraming(unittest.TestCase):
             check=False,
         )
         self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
-        self.assertIn("Content-Length", proc.stdout)
+        self.assertNotIn("Content-Length", proc.stdout)
+        self.assertIn("NDJSON", proc.stdout)
+        self.assertIn("search_docs", proc.stdout)
 
 
 class TestOverlayMcpDefaults(unittest.TestCase):
@@ -82,7 +84,7 @@ class TestOverlayMcpDefaults(unittest.TestCase):
         stdio = servers["diffusers-docs"]
         self.assertEqual(stdio.get("type"), "stdio")
         self.assertEqual(stdio["command"], "python3")
-        self.assertEqual(stdio["args"], ["-u", "/workspace/.cursor/mcp-diffusers-docs.py"])
+        self.assertEqual(stdio["args"], ["-u", ".cursor/mcp-diffusers-docs.py"])
         self.assertEqual(servers["huggingface"].get("url"), "https://huggingface.co/mcp")
 
     def test_attach_copies_empty_default_and_optional(self):
@@ -130,6 +132,7 @@ class TestMcpLauncher(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8", "replace"))
         self.assertIn(b"search_docs", proc.stdout)
+        self.assertNotIn(b"Content-Length", proc.stdout)
         self.assertNotIn(b"${workspaceFolder}", proc.stdout)
 
 
