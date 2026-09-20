@@ -2,6 +2,7 @@
 # Cloud Agent snapshot bootstrap (idempotent).
 # Torch stays out of requirements.txt so local `make check` stays pyyaml-only.
 set -euo pipefail
+export PATH="${HOME}/.local/bin:${PATH}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
@@ -17,5 +18,6 @@ import diffusers
 print("torch", torch.__version__, "cuda", torch.cuda.is_available())
 print("diffusers", diffusers.__version__)
 PY
-command -v diffusers-docs-mcp
+test -x "${HOME}/.local/bin/diffusers-docs-mcp"
+echo "shim: ${HOME}/.local/bin/diffusers-docs-mcp"
 echo "cloud-install: ok"
