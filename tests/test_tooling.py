@@ -697,8 +697,12 @@ class TestAttachEmptyMcp(unittest.TestCase):
             scaffold = (fake / ".cursor" / "commands" / "scaffold.md").read_text()
             self.assertIn("rules.yaml", scaffold)
             self.assertIn("scheduling_TEMPLATE.py", scaffold)
+            self.assertIn("make quality", scaffold)
+            self.assertIn("check_dummies.py", scaffold)
+            self.assertIn("AGENTS.md", scaffold)
             self.assertNotIn("docs_mcp_server.py", scaffold)
             self.assertNotIn("Those files are the contract", scaffold)
+            self.assertNotIn("those two files only", scaffold)
 
     def test_attach_does_not_delete_inherited_workflows(self):
         with tempfile.TemporaryDirectory() as td:
@@ -755,11 +759,13 @@ class TestEngineerPromptScope(unittest.TestCase):
         self.assertIn("rules.yaml", text)
         self.assertIn("scheduling_TEMPLATE.py", text)
         self.assertIn("make style", text)
-        self.assertIn("check_dummies.py", text)
+        self.assertIn("make quality", text)
+        self.assertIn("AGENTS.md", text)
         self.assertNotIn("Those files are the contract", text)
         self.assertNotIn("docs_mcp_server.py", text)
         self.assertNotIn("scheduling_euler_discrete.py", text)
         self.assertNotIn("convention_check.py --all", text)
+        self.assertNotIn("those two files only", text)
 
 
 class TestOverlayPrGate(unittest.TestCase):

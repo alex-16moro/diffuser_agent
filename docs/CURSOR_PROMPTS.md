@@ -167,6 +167,8 @@ the tooling. Keep it minimal; do not implement a real model.
   rules, different surface. Note the upstream-vs-customer split. One registry,
   many projections — not a capability per SDLC step.
 - **Fork PR hygiene:** draft, **base `main`**, `[fork demo — not for upstream]`.
-  Overlay-gate is the customer check-run. Overlay green does not mean Hugging
-  Face CI is green; do not delete their workflows. Math stays TODO.
+  Overlay-gate is the customer check-run; `make style` / `make quality` are the
+  library's. Jobs that need Hugging Face private runners or size labels may
+  still be red on this fork — hosting, not a reason to skip those commands.
+  Do not delete their workflows. Math stays TODO.
 - **Maintainability:** Prompt B — one edit propagates everywhere.

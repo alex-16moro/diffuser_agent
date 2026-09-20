@@ -91,6 +91,7 @@ def copy_overlay(target: Path) -> None:
     print("  Default MCP: stdio diffusers-docs (no Hub HTTP). Cloud dropdown: diffusers-docs-mcp")
     print("  Fork PRs: draft, title [fork demo — not for upstream]")
     print("  Overlay CI: .github/workflows/ramp-kit-overlay.yml (file-scoped, never --all)")
+    print("  Library CI: invoke make style / make quality / check_copies / check_dummies")
     print("  Do not overwrite upstream AGENTS.md / .ai/; do not delete HF workflows")
 
 

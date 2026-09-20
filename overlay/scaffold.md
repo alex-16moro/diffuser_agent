@@ -3,24 +3,35 @@
 Usage: `/scaffold <component> <Name>`
 
 This workspace is `huggingface/diffusers` (fork). Overlay kit is `ramp-kit/`
-(cloned from alex-16moro/diffuser_agent). Do not overwrite `.ai/` or root `AGENTS.md`.
+(cloned from alex-16moro/diffuser_agent).
+
+Root `AGENTS.md` and `.ai/` are Hugging Face's agent guide. **Read them. Do not
+overwrite them.** They are how the library itself wants code to look (`make
+style`, `make quality`, `# Copied from`, self-review). This overlay adds the
+first-contribution recipe and a customer file-scoped gate. It does not replace
+the library guide.
+
 Do not disable or guard inherited GitHub workflows.
 
 `$1` = component (`scheduler`). `$2` = PascalCase name without suffix (`PNDMLite`
 → `PNDMLiteScheduler`, `scheduling_pndm_lite.py`). If `scheduling_<snake>.py`
 already exists, pick a new unused `$2`.
 
-Copy the overlay templates. Do not start from library scheduler source and do
-not search docs for this PR. Keep `TODO(engineer)` in `step()`.
+Copy the overlay templates. Do not start from library scheduler source. Keep
+`TODO(engineer)` in `step()`.
 
-## 0. Ground in the registry
+## 0. Ground in the registry **and** the library guide
 
 Read `ramp-kit/conventions/rules.yaml`. Blocking ids for this contribution:
 SCHED001, SCHED002, SCHED003, REPRO001, DEVICE001, DEPR001, MUT001, TEST001,
 TEST002.
 
-The overlay templates already satisfy them. Stay inside `.cursorignore`. Do not
-read or copy `ramp-kit/examples/candidate_scheduler/`.
+Read root `AGENTS.md` (and `.ai/` only as that guide directs). The templates
+already satisfy the overlay registry. Library CI (`make style` / `make quality`
+/ copies / dummies) is also required before the PR.
+
+Stay inside `.cursorignore`. Do not read or copy
+`ramp-kit/examples/candidate_scheduler/`.
 
 ## 1. Paths (library layout, not the kit stand-in)
 
@@ -71,7 +82,8 @@ Fix every **blocking** finding. Stop at 0 blocking. Do not edit `step()` math.
 
 ## 6. Library CI — invoke until green, then open the PR
 
-Iterate until all of these exit 0. Do not reimplement them:
+These are the library's own checks from `AGENTS.md`. Iterate until all exit 0.
+Do not reimplement them:
 
 ```bash
 make style
