@@ -59,7 +59,7 @@ check-json:
 
 grokbot:
 	@$(PYTHON) tools/convention_check.py --json examples/candidate_scheduler > /tmp/ramp-kit-gate.json || true
-	$(PYTHON) tools/grokbot_sim.py --role $(or $(ROLE),qa) /tmp/ramp-kit-gate.json
+	$(PYTHON) tools/grokbot_sim.py --role $(or $(ROLE),qa) --context examples/change_context.example.json /tmp/ramp-kit-gate.json
 
 grokbot-pack:
 	@test -f agents/grokbot-profiles.md || $(PYTHON) tools/build_projections.py
@@ -93,7 +93,7 @@ demo:
 	$(PYTHON) -m unittest discover -s tests -t . -v
 	@echo "\n========== 5. GrokBot QA simulation (read-side, does not gate) =========="
 	@$(PYTHON) tools/convention_check.py --json examples/candidate_scheduler > /tmp/ramp-kit-gate.json || true
-	$(PYTHON) tools/grokbot_sim.py --role qa /tmp/ramp-kit-gate.json
+	$(PYTHON) tools/grokbot_sim.py --role qa --context examples/change_context.example.json /tmp/ramp-kit-gate.json
 	@echo "\n========== 6. Scheduler contract vs fork source =========="
 	$(PYTHON) tools/verify_scheduler_contract.py
 

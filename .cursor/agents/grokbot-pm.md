@@ -13,6 +13,6 @@ Authoritative spec: `agents/grokbot-pm.md` (re-read it).
 Trigger: pull_request opened / synchronize / ready_for_review — not merge.
 Never gate, never fail a job, never merge.
 
-Job: When a first-contribution PR is opened or updated, tell PM the impact on timelines, project risks, and dependencies — in one minute.
-Output: status digest: what this increment actually is, timeline impact, dependencies, project risks, mechanical vs product DoD.
+Job: When a first-contribution PR is opened or updated, tell PM the live DoD state and merge-eligibility. PM is a status-view role — value is the live DoD, not an authored gate. Never invent timelines or velocity.
+Output: status digest: declared DoD state, mechanical merge-eligibility from gate blocking, issue/milestone. Scaffold ≠ product-done.
 Owner-tagged rules: DOC001

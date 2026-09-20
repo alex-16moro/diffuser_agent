@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -261,30 +262,122 @@ class TestOwnersAndProjections(unittest.TestCase):
 
 
 class TestGrokbotSim(unittest.TestCase):
-    def test_qa_risk_briefing_from_sample_gate(self):
-        proc_gate = subprocess.run(
+    CONTEXT = ROOT / "examples" / "change_context.example.json"
+
+    def _gate_json(self, example_dir: str) -> str:
+        proc = subprocess.run(
             [sys.executable, str(ROOT / "tools" / "convention_check.py"),
-             "--json", str(ROOT / "examples" / "candidate_scheduler")],
+             "--json", str(ROOT / "examples" / example_dir)],
             cwd=ROOT,
             capture_output=True,
             text=True,
             check=False,
         )
-        self.assertIn('"findings"', proc_gate.stdout)
+        self.assertIn('"findings"', proc.stdout)
+        return proc.stdout
+
+    def _sim(self, role: str, gate_json: str | None = None, context: bool = True) -> str:
+        cmd = [sys.executable, str(ROOT / "tools" / "grokbot_sim.py"), "--role", role]
+        if context:
+            cmd.extend(["--context", str(self.CONTEXT)])
+        if gate_json is None:
+            gate_json = self._gate_json("scaffolded_scheduler")
         proc = subprocess.run(
-            [sys.executable, str(ROOT / "tools" / "grokbot_sim.py"), "--role", "qa"],
+            cmd,
             cwd=ROOT,
-            input=proc_gate.stdout,
+            input=gate_json,
             capture_output=True,
             text=True,
             check=False,
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        out = proc.stdout
+        return proc.stdout
+
+    def _first_section(self, text: str) -> str:
+        parts = text.split("## ")
+        self.assertGreater(len(parts), 1, text)
+        return parts[1]
+
+    def test_qa_risk_briefing_from_sample_gate(self):
+        out = self._sim("qa", self._gate_json("candidate_scheduler"), context=False)
         self.assertIn("SIMULATION", out)
         self.assertIn("RISK BRIEFING", out)
-        self.assertIn("QA-owned", out)
+        self.assertIn("Test adequacy", out)
         self.assertIn("Does not gate", out)
+
+    def test_devops_leads_with_ci_and_drift(self):
+        out = self._sim("devops")
+        lead = self._first_section(out)
+        self.assertIn("Pipeline health", lead)
+        self.assertIn("convention_gate", lead)
+        self.assertIn("[ci]", lead)
+        self.assertIn("[drift]", lead)
+        self.assertIn("inherited_workflows", lead)
+        self.assertNotIn("SCHED", lead)
+        self.assertNotIn("TEST001", lead)
+
+    def test_pm_leads_with_dod_merge_and_issue(self):
+        out = self._sim("pm")
+        lead = self._first_section(out)
+        self.assertIn("DoD state", lead)
+        self.assertIn("scaffolded", lead)
+        self.assertIn("scaffold ≠ product-done", lead)
+        self.assertIn("merge-eligible", lead)
+        self.assertIn("issue:", lead)
+        self.assertIn("milestone:", lead)
+        self.assertIn("[issue]", lead)
+        self.assertIn("[gate]", lead)
+
+    def test_pm_and_devops_are_not_interchangeable(self):
+        pm = self._sim("pm")
+        devops = self._sim("devops")
+        pm_lead = self._first_section(pm)
+        devops_lead = self._first_section(devops)
+        self.assertIn("inherited_workflows", devops_lead)
+        self.assertNotIn("inherited_workflows", pm_lead)
+        self.assertIn("milestone", pm_lead.lower())
+        self.assertNotIn("milestone", devops_lead.lower())
+        self.assertNotEqual(pm_lead, devops_lead)
+        self.assertNotIn("Pipeline health", pm)
+        self.assertNotIn("DoD state", devops)
+
+    def test_qa_leads_with_test_adequacy_and_residual_math(self):
+        out = self._sim("qa", self._gate_json("candidate_scheduler"))
+        lead = self._first_section(out)
+        self.assertIn("Test adequacy", lead)
+        self.assertIn("TEST001", lead)
+        self.assertIn("Residual math risk", out)
+        self.assertIn("numerical method vs the paper", out.lower())
+
+    def test_every_claim_line_is_tagged_and_cannot_see_is_nonempty(self):
+        import re
+
+        tag = re.compile(r"\[(gate|ci|issue|drift)\]")
+        for role in ("pm", "qa", "devops"):
+            out = self._sim(role)
+            bullets = [ln for ln in out.splitlines() if ln.startswith("- ")]
+            self.assertTrue(bullets, f"{role} produced no bullets")
+            for ln in bullets:
+                self.assertRegex(ln, tag, f"{role} untagged: {ln}")
+            self.assertIn("## Cannot see", out)
+            after = out.split("## Cannot see", 1)[1]
+            cannot_bullets = [ln for ln in after.splitlines() if ln.startswith("- ")]
+            self.assertTrue(cannot_bullets, f"{role} Cannot see is empty")
+
+    def test_pm_does_not_invent_timelines(self):
+        out = self._sim("pm").lower()
+        for needle in ("story points", "eta:", "ship by", "velocity is"):
+            self.assertNotIn(needle, out)
+
+    def test_change_context_example_schema(self):
+        data = json.loads(self.CONTEXT.read_text())
+        self.assertIn("pr", data)
+        for key in ("number", "title", "issue", "milestone", "labels", "draft"):
+            self.assertIn(key, data["pr"], key)
+        for key in ("convention_gate", "drift_check", "inherited_workflows"):
+            self.assertIn(key, data["ci"], key)
+        self.assertIn(data["state"], ("scaffolded", "gate-green", "tests-pass", "merge-eligible"))
+        self.assertIn("EulerLite", data["pr"]["title"] + data["pr"]["issue"])
 
 
 class TestGrokbotIphonePack(unittest.TestCase):
@@ -306,13 +399,21 @@ class TestGrokbotIphonePack(unittest.TestCase):
         qa = (ROOT / "agents" / "grokbot-qa.md").read_text()
         pm = (ROOT / "agents" / "grokbot-pm.md").read_text()
         devops = (ROOT / "agents" / "grokbot-devops.md").read_text()
-        self.assertIn("Residual risk", qa)
-        self.assertIn("Timeline", pm)
+        self.assertIn("Residual math risk", qa)
+        self.assertIn("DoD state", pm)
+        self.assertIn("status-view", pm.lower())
         self.assertIn("CI/CD", devops)
+        self.assertIn("Cannot see", qa)
+        self.assertIn("Cannot see", pm)
+        self.assertIn("Cannot see", devops)
+        self.assertIn("[gate]", qa)
         self.assertIn("opened", qa.lower())
         self.assertIn("do not brief on merge", qa.lower())
         self.assertIn("do not brief on merge", pm.lower())
         self.assertIn("Optional: after merge", devops)
+        self.assertIn("ramp-kit-overlay", devops)
+        self.assertIn("do not copy it", devops.lower())
+        self.assertNotIn("enable convention-gate.yml on the fork", devops.lower())
         self.assertIn("closed", devops.lower())
         for role in ("qa", "pm", "devops"):
             agent = ROOT / ".cursor" / "agents" / f"grokbot-{role}.md"
@@ -458,6 +559,91 @@ class TestAttachEmptyMcp(unittest.TestCase):
             self.assertEqual(cfg.get("mcpServers"), {})
             self.assertTrue((fake / ".cursor" / "mcp.optional.json").is_file())
             self.assertNotIn("AGENTS.md", [p.name for p in fake.iterdir()])
+            wf = (fake / ".github" / "workflows" / "ramp-kit-overlay.yml").read_text()
+            self.assertIn("ramp-kit-overlay", wf)
+            self.assertNotIn("convention_check.py --all", wf)
+            self.assertIn("Never convention_check --all", wf)
+            self.assertTrue((fake / ".github" / "scripts" / "overlay_pr_gate.py").is_file())
+
+    def test_attach_does_not_delete_inherited_workflows(self):
+        with tempfile.TemporaryDirectory() as td:
+            fake = Path(td) / "diffusers"
+            (fake / "src" / "diffusers" / "schedulers").mkdir(parents=True)
+            inherited = fake / ".github" / "workflows" / "pr_tests.yml"
+            inherited.parent.mkdir(parents=True)
+            inherited.write_text("name: inherited\n")
+            proc = subprocess.run(
+                [sys.executable, str(ROOT / "tools" / "attach_library.py"),
+                 "--target", str(fake)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+            self.assertTrue(inherited.is_file())
+            self.assertEqual(inherited.read_text(), "name: inherited\n")
+            self.assertTrue((fake / ".github" / "workflows" / "ramp-kit-overlay.yml").is_file())
+
+
+class TestOverlayPrGate(unittest.TestCase):
+    def test_skips_when_no_relevant_files(self):
+        env = {**os.environ, "OVERLAY_GATE_FILES": "README.md", "OVERLAY_KIT": str(ROOT)}
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "overlay_pr_gate.py")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("skip", proc.stdout.lower())
+
+    def test_file_scoped_clean_and_refuses_all(self):
+        target = ROOT / "examples" / "scaffolded_scheduler" / "scheduling_ddpm_lite.py"
+        env = {
+            **os.environ,
+            "OVERLAY_GATE_FILES": str(target.relative_to(ROOT)),
+            "OVERLAY_KIT": str(ROOT),
+        }
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "overlay_pr_gate.py")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+        self.assertIn("file-scoped", proc.stdout.lower())
+        refuse = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "overlay_pr_gate.py"), "--all"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(refuse.returncode, 2)
+        self.assertIn("refusing --all", refuse.stderr)
+
+    def test_flags_candidate_scheduler(self):
+        target = ROOT / "examples" / "candidate_scheduler" / "scheduling_my_sde.py"
+        env = {
+            **os.environ,
+            "OVERLAY_GATE_FILES": str(target.relative_to(ROOT)),
+            "OVERLAY_KIT": str(ROOT),
+        }
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "overlay_pr_gate.py")],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertGreater(proc.returncode, 0, proc.stdout + proc.stderr)
 
 
 class TestDemoContribute(unittest.TestCase):

@@ -13,6 +13,6 @@ Authoritative spec: `agents/grokbot-qa.md` (re-read it).
 Trigger: pull_request opened / synchronize / ready_for_review — not merge.
 Never gate, never fail a job, never merge.
 
-Job: When a first-contribution PR is opened or updated, tell QA — from a testing point of view — impact, coverage, and residual risk.
-Output: QA risk briefing: testing impact, what the gate covered, residual human risk (math, duplication, missing integration).
+Job: When a first-contribution PR is opened or updated, tell QA — from a testing point of view — test adequacy (owner=qa) and residual math risk.
+Output: QA risk briefing: test-adequacy first, then residual human risk (math, duplication, missing integration).
 Owner-tagged rules: TEST001, TEST002

@@ -18,7 +18,9 @@ These were made before this submission pass. Do not silently reopen them.
    follow-up on merge (landed-on-main note).
 
 4. **Gate is file-scoped on the library fork.** Never `convention_check.py --all`
-   on the full diffusers tree.
+   on the full diffusers tree. Fork GitHub Actions use
+   `.github/workflows/ramp-kit-overlay.yml` (attached), not the kit's
+   `convention-gate.yml`.
 
 5. **Default fork MCP is empty.** Cloud launches must not prompt for Hub OAuth
    or broken stdio cwd. CLI `docs_mcp_server.py --query` is the fallback.

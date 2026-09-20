@@ -31,6 +31,9 @@ meta:
   build_target: cursor
   # owner: who co-authors this rule in the ONE registry (dev|architect|qa|pm|devops).
   # GrokBot role-agents are READ-side views of owner-tagged rows; they never gate.
+  # PM is a status-view role (live DoD + merge-eligibility from gate blocking +
+  # issue/milestone from change-context). DOC001 is the only owner=pm row; we
+  # do not add an unimplemented PR-body check (convention_check scans files).
   upstream_conventions:
     - "docs: conceptual/contribution.md (# Copied from, tests, make style/quality)"
     - "docs: conceptual/philosophy.md (single-file policy)"

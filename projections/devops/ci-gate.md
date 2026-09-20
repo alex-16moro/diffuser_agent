@@ -27,6 +27,10 @@ python tools/convention_check.py --all   # human-readable, sets exit code
   GrokBot role-agents brief a first-contribution PR for that owner; they never gate.
   Specs: `agents/grokbot-*.md` (repo wins). Trigger: PR opened/updated.
   Optional DevOps-only: closed-as-merged landed note.
+- **This kit** runs `.github/workflows/convention-gate.yml` with `--all`.
+  **The library fork** must not. Attach copies `overlay/ramp-kit-overlay.yml`
+  → `.github/workflows/ramp-kit-overlay.yml` (file-scoped; never `--all`;
+  does not delete inherited Hugging Face workflows).
 
 ## Owner-tagged rules (devops)
 - `DEVICE001` No hardcoded CUDA/device placement (block)

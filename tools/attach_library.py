@@ -56,13 +56,22 @@ def copy_overlay(target: Path) -> None:
     shutil.copy2(overlay / "cursorignore", target / ".cursorignore")
     shutil.copy2(overlay / "OVERLAY.md", target / "OVERLAY.md")
 
+    # File-scoped overlay CI. Do not delete inherited Hugging Face workflows.
+    wf_dir = target / ".github" / "workflows"
+    wf_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(overlay / "ramp-kit-overlay.yml", wf_dir / "ramp-kit-overlay.yml")
+    scripts = target / ".github" / "scripts"
+    scripts.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(KIT / "tools" / "overlay_pr_gate.py", scripts / "overlay_pr_gate.py")
+
     gi = target / ".gitignore"
     text = gi.read_text(encoding="utf-8") if gi.exists() else ""
     if "\n.cursor\n" in text or text.endswith("\n.cursor"):
         text = text.replace("# Cursor\n.cursor\n", "# Cursor — upstream ignored this; overlay tracks .cursor (OVERLAY.md)\n")
         text = text.replace("\n.cursor\n", "\n")
         gi.write_text(text, encoding="utf-8")
-    if "ramp-kit/" not in text.splitlines() and "ramp-kit/" not in gi.read_text(encoding="utf-8").splitlines():
+        text = gi.read_text(encoding="utf-8")
+    if "ramp-kit/" not in text.splitlines():
         with gi.open("a", encoding="utf-8") as fh:
             fh.write("\n# Ramp Kit overlay clone (see OVERLAY.md)\nramp-kit/\n")
 
@@ -81,6 +90,7 @@ def copy_overlay(target: Path) -> None:
     print("  Cloud Agent: launch ON this fork (main), install clones ramp-kit/")
     print("  Default MCP is empty; opt-in servers: .cursor/mcp.optional.json")
     print("  Fork PRs: draft, title [fork demo — not for upstream]")
+    print("  Overlay CI: .github/workflows/ramp-kit-overlay.yml (file-scoped, never --all)")
     print("  Do not overwrite upstream AGENTS.md / .ai/; do not delete HF workflows")
 
 

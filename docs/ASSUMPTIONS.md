@@ -36,3 +36,26 @@ contract facts.
    `AGENTS.md` or `.ai/`.
 
 8. **No Euler math.** `step()` stays `TODO(engineer)` in templates and scaffolds.
+
+9. **PM is a status-view role.** A "PR references an issue" regex-on-body
+   check cannot be grounded in `convention_check.py` (file scans only). A
+   no-op check would be a fake gate. PM keeps DOC001 (warn, docstrings) and
+   briefs live DoD state + merge-eligibility from gate blocking count +
+   issue/milestone from change-context. No fabricated velocity or dates.
+
+10. **Change-context is the offline stand-in for the PR event.** Schema:
+    `examples/change_context.example.json` (`pr`, `ci`, `state`).
+    `grokbot_sim.py --context` fuses that with gate JSON. When gate JSON is
+    omitted and stdin is a TTY, the sim scans `examples/scaffolded_scheduler`
+    (0 findings) so the EulerLite demo is offline-runnable. Source tags on
+    every claim: `[gate]` `[ci]` `[issue]` `[drift]`.
+
+11. **Fork overlay CI is file-scoped, not kit `--all`.** The DevOps gap on
+    first-contribution PRs was: no GitHub check-run for the overlay gate,
+    and the bot recommended enabling kit `convention-gate.yml` (which
+    would `--all` the library). Attach now copies
+    `overlay/ramp-kit-overlay.yml`. DevOps must not recommend copying the
+    kit `--all` workflow onto the fork. Inherited HF Actions idle/red on
+    a fork demo stay expected. A new workflow does not run until it exists
+    on the PR base (`main`). Merge follow-up reports the **base** branch,
+    not the topic head.
