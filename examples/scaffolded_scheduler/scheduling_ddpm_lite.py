@@ -46,7 +46,8 @@ class DDPMLiteScheduler(SchedulerMixin, ConfigMixin):
         """
         self.num_inference_steps = num_inference_steps
         step = self.config.num_train_timesteps // num_inference_steps
-        timesteps = (torch.arange(0, num_inference_steps) * step).round()[::-1].clone()
+        timesteps = (torch.arange(0, num_inference_steps) * step).round().long()
+        timesteps = torch.flip(timesteps, dims=[0])   # torch has no [::-1]
         self.timesteps = timesteps.to(device) if device is not None else timesteps
 
     def step(
